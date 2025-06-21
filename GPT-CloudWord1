@@ -4,7 +4,330 @@ import { Sparkles, MessageCircle, X, RotateCcw } from "lucide-react";
 
 // (La constante offers = tout le tableau Excel multilingue...)
 const offers = [
+  // Version robuste : suggestions de mots-clés + feedback UX + navigation affinée + bugfixes
+import React, { useState } from "react";
+import { Sparkles, MessageCircle, X, RotateCcw } from "lucide-react";
+
+// (La constante offers = tout le tableau Excel multilingue...)
+const offers = [
   // ... Coller toutes les offres ici ...
+];
+
+function getAvailableKeywords(selected, offers) {
+  // 1. Si aucun mot clé sélectionné, top keywords globaux (hors tags inutiles)
+  if (selected.length === 0) {
+    const keywordCount = {};
+    offers.forEach((offer) => {
+      offer.keywords.forEach((kw) => {
+        if (kw.startsWith("tag_")) return; // On ne propose pas les tags d’intention en premier
+        keywordCount[kw] = (keywordCount[kw] || 0) + 1;
+      });
+    });
+    return Object.entries(keywordCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 25)
+      .map(([kw]) => kw);
+  } else {
+    // 2. Avec sélection : mots-clés présents dans TOUTES les offres filtrées et non sélectionnés
+    const filteredOffers = offers.filter((offer) => selected.every((sel) => offer.keywords.includes(sel)));
+    if (filteredOffers.length === 0) return [];
+    // Les mots clefs qui apparaissent dans toutes les offres filtrées
+    const keywordCount = {};
+    filteredOffers.forEach((offer) => {
+      offer.keywords.forEach((kw) => {
+        if (!selected.includes(kw) && !kw.startsWith("tag_")) keywordCount[kw] = (keywordCount[kw] || 0) + 1;
+      });
+    });
+    // Ordre par fréquence, n'affiche pas les keywords déjà sélectionnés
+    return Object.entries(keywordCount)
+      .sort((a, b) => b[1] - a[1])
+      .map(([kw]) => kw);
+  }
+}
+
+export default function GenAIAgentUXInteractiveMenu() {
+  const [selected, setSelected] = useState([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [language, setLanguage] = useState("fr");
+
+  const availableKeywords = getAvailableKeywords(selected, offers);
+  const filteredOffers = selected.length
+    ? offers.filter((offer) => selected.every((kw) => offer.keywords.includes(kw)))
+    : [];
+
+  const handleClick = (word) => {
+    if (!selected.includes(word)) setSelected((prev) => [...prev, word]);
+  };
+  const handleReset = () => setSelected([]);
+
+  return (
+    <div className="relative min-h-screen bg-white text-gray-900 p-8 flex flex-col items-center justify-start space-y-8 transition-all duration-300 ease-in-out">
+      <h1 className="text-3xl font-bold text-center flex items-center gap-2">
+        <Sparkles className="w-6 h-6 text-orange-500 animate-pulse" /> Agent GenAI — Menu interactif IA
+      </h1>
+      <div className="fixed bottom-6 right-6 z-50">
+        <div className="relative flex items-center justify-center w-20 h-20">
+          <div className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-10 animate-ping"></div>
+          <div className="absolute inline-flex h-full w-full rounded-full bg-orange-300 opacity-10 animate-pulse"></div>
+          <button
+            onClick={() => setChatOpen(!chatOpen)}
+            className="relative z-10 bg-orange-500 hover:bg-orange-400 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl transition-all duration-200 ease-in-out"
+            aria-label="Ouvrir le menu GenAI"
+          >
+            <MessageCircle className="w-7 h-7" />
+          </button>
+        </div>
+        {chatOpen && (
+          <div className={`absolute bottom-24 right-0 ${selected.length > 0 ? "w-[48rem] flex-row" : "w-96 flex-col"} max-h-[80vh] overflow-hidden bg-white text-gray-900 rounded-xl shadow-2xl border border-orange-200 transition-all duration-500 ease-in-out flex`}>
+            {/* Colonne gauche : mots-clés */}
+            <div className="flex-1 min-w-[18rem] max-w-[22rem] border-r border-gray-200 p-4 flex flex-col">
+              <div className="flex justify-between items-center mb-2">
+                <div className="flex gap-1">
+                  {["fr", "en", "es", "it", "gr"].map((lang) => (
+                    <button key={lang} onClick={() => setLanguage(lang)} className={language === lang ? "font-bold" : "text-gray-400"}>
+                      {lang === "fr" && "🇫🇷"}
+                      {lang === "en" && "🇬🇧"}
+                      {lang === "es" && "🇪🇸"}
+                      {lang === "it" && "🇮🇹"}
+                      {lang === "gr" && "🇬🇷"}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleReset}
+                    className="text-orange-500 hover:text-orange-700 transition-colors"
+                    aria-label="Réinitialiser"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setChatOpen(false)}
+                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                    aria-label="Fermer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {availableKeywords.length === 0 ? (
+                  <p className="text-gray-400 text-sm">Aucun mot-clé disponible pour affiner davantage. Essayez de retirer un mot-clé ou réinitialisez.</p>
+                ) : (
+                  availableKeywords.map((word, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleClick(word)}
+                      className="text-sm px-3 py-1 rounded-full border border-orange-500 bg-orange-50 text-orange-800 hover:bg-orange-100 flex items-center gap-1 transition-all duration-200 ease-in-out"
+                    >
+                      <Sparkles className="w-3 h-3 text-orange-500" /> {word}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+            {/* Colonne droite : résultats */}
+            {selected.length > 0 && (
+              <div className="flex-1 min-w-[22rem] max-w-[26rem] p-4 overflow-y-auto border-l border-orange-100 bg-orange-50/30 animate-fade-in">
+                <div className="space-y-4">
+                  <p className="text-sm font-medium">
+                    Résultats pour : <span className="font-bold">{selected.join(", ")}</span>
+                  </p>
+                  {filteredOffers.length === 0 ? (
+                    <p className="text-gray-400">Aucune offre ne correspond à cette sélection. Essayez d’en retirer pour élargir la recherche.</p>
+                  ) : (
+                    filteredOffers.map((offer, j) => (
+                      <a
+                        key={j}
+                        href={offer.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block border border-orange-100 p-3 rounded-md hover:bg-orange-100 hover:shadow-md hover:scale-[1.02] transition-all duration-300 ease-in-out"
+                      >
+                        <p className="font-semibold text-orange-700 underline">{offer.name}</p>
+                        <p className="text-sm text-gray-700 mt-1">
+                          {offer.description[language] || offer.description.en}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1 italic">
+                          {offer.primary_category_name} — {offer.sub_category_name}
+                        </p>
+                      </a>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+},
+  {
+    "name": "Multisourcing Service Integration (MSI)",
+    "url": "https://www.orange-business.com/be-en/solutions/consulting-digital-transformation/multisourcing-service-integration-msi",
+    "description": {
+      "en": "Centrally manage all of your IT services expenditure, contracts and SLAs with a single point of control, improving service delivery and optimizing costs.",
+      "fr": "Gérez de manière centralisée toutes vos dépenses de services IT, contrats et SLAs grâce à un point de contrôle unique, améliorant la qualité de service et optimisant les coûts.",
+      "es": "Gestione de forma centralizada todos sus gastos de servicios IT, contratos y SLAs con un único punto de control, mejorando la calidad del servicio y optimizando los costes.",
+      "it": "Gestite centralmente tutte le vostre spese per servizi IT, contratti e SLA con un unico punto di controllo, migliorando la qualità del servizio e ottimizzando i costi.",
+      "gr": "Διαχειριστείτε κεντρικά όλες τις δαπάνες υπηρεσιών IT, συμβάσεις και SLA μέσω ενός μοναδικού σημείου ελέγχου, βελτιώνοντας την ποιότητα της υπηρεσίας και βελτιστοποιώντας το κόστος."
+    },
+    "keywords": [
+      "msi",
+      "it services",
+      "service management",
+      "opex",
+      "cost optimization",
+      "vendor management",
+      "contract management",
+      "tag_pilotage_it"
+    ],
+    "category_type": "Solution",
+    "primary_category_name": "Consulting and digital transformation",
+    "sub_category_name": "IT Service Management"
+  },
+  {
+    "name": "Data & AI Architecture Assessment",
+    "url": "https://www.orange-business.com/be-en/solutions/data-intelligence-ai/data-ai-architecture-assessment",
+    "description": {
+      "en": "Optimizing value creation through a modern and scalable data & AI architecture tailored to your business goals.",
+      "fr": "Optimisez la création de valeur grâce à une architecture data & IA moderne et évolutive, adaptée à vos objectifs business.",
+      "es": "Optimice la creación de valor con una arquitectura de datos e IA moderna y escalable, adaptada a sus objetivos empresariales.",
+      "it": "Ottimizzate la creazione di valore con un'architettura dati e IA moderna e scalabile, su misura per i vostri obiettivi aziendali.",
+      "gr": "Βελτιστοποιήστε τη δημιουργία αξίας με μια σύγχρονη και επεκτάσιμη αρχιτεκτονική δεδομένων & τεχνητής νοημοσύνης, προσαρμοσμένη στους επιχειρηματικούς σας στόχους."
+    },
+    "keywords": [
+      "data architecture",
+      "ai",
+      "data platform",
+      "assessment",
+      "business goals",
+      "value creation",
+      "tag_data_strategy"
+    ],
+    "category_type": "Solution",
+    "primary_category_name": "Data Intelligence & AI",
+    "sub_category_name": "Data Architecture"
+  },
+  {
+    "name": "AI Center of Excellence (CoE)",
+    "url": "https://www.orange-business.com/be-en/solutions/data-intelligence-ai/ai-center-excellence-coe",
+    "description": {
+      "en": "Empowering your team with expert guidance to adopt and industrialize artificial intelligence within your organization.",
+      "fr": "Accompagnez vos équipes grâce à l’expertise de nos consultants pour adopter et industrialiser l’intelligence artificielle dans votre organisation.",
+      "es": "Impulse a sus equipos con el asesoramiento experto de nuestros consultores para adoptar e industrializar la inteligencia artificial en su organización.",
+      "it": "Supportate i vostri team con la consulenza dei nostri esperti per adottare e industrializzare l’intelligenza artificiale nella vostra organizzazione.",
+      "gr": "Ενισχύστε τις ομάδες σας με την καθοδήγηση των ειδικών μας για να υιοθετήσετε και να βιομηχανοποιήσετε την τεχνητή νοημοσύνη στον οργανισμό σας."
+    },
+    "keywords": [
+      "ai",
+      "coe",
+      "artificial intelligence",
+      "expert guidance",
+      "consulting",
+      "industrialization",
+      "tag_transformation_ai"
+    ],
+    "category_type": "Solution",
+    "primary_category_name": "Data Intelligence & AI",
+    "sub_category_name": "AI Enablement"
+  },
+  {
+    "name": "Cloud MVP",
+    "url": "https://www.orange-business.com/be-en/solutions/data-intelligence-ai/cloud-mvp",
+    "description": {
+      "en": "Future-Proof your Business with a cost-effective, scalable and secure Cloud Data Platform, ready to support your data-driven journey.",
+      "fr": "Préparez l’avenir de votre entreprise avec une plateforme cloud data économique, évolutive et sécurisée, prête à soutenir votre transformation data.",
+      "es": "Prepare el futuro de su empresa con una plataforma de datos en la nube rentable, escalable y segura, lista para impulsar su transformación digital.",
+      "it": "Preparare il futuro della vostra azienda con una piattaforma cloud dati conveniente, scalabile e sicura, pronta a supportare la vostra trasformazione digitale.",
+      "gr": "Προετοιμάστε το μέλλον της επιχείρησής σας με μια οικονομική, επεκτάσιμη και ασφαλή πλατφόρμα δεδομένων cloud, έτοιμη να στηρίξει τον ψηφιακό σας μετασχηματισμό."
+    },
+    "keywords": [
+      "cloud",
+      "mvp",
+      "data platform",
+      "cost-effective",
+      "cloud data",
+      "scalable",
+      "secure",
+      "transformation",
+      "tag_platform_cloud"
+    ],
+    "category_type": "Solution",
+    "primary_category_name": "Data Intelligence & AI",
+    "sub_category_name": "Cloud Data Platform"
+  },
+  {
+    "name": "Flexible SD-WAN",
+    "url": "https://www.orange-business.com/be-en/solutions/connectivity/flexible-sd-wan",
+    "description": {
+      "en": "Next generation SD-WAN to enable business agility, resilience and application performance.",
+      "fr": "SD-WAN de nouvelle génération pour favoriser l’agilité, la résilience et la performance applicative.",
+      "es": "SD-WAN de próxima generación para potenciar la agilidad, la resiliencia y el rendimiento de las aplicaciones.",
+      "it": "SD-WAN di nuova generazione per favorire l’agilità, la resilienza e le prestazioni applicative.",
+      "gr": "SD-WAN νέας γενιάς για ενίσχυση της ευελιξίας, της ανθεκτικότητας και της απόδοσης εφαρμογών."
+    },
+    "keywords": [
+      "sd-wan",
+      "network",
+      "agility",
+      "connectivity",
+      "resilience",
+      "application performance",
+      "tag_connectivite"
+    ],
+    "category_type": "Solution",
+    "primary_category_name": "Connectivity",
+    "sub_category_name": "SD-WAN"
+  },
+  {
+    "name": "LAN Management",
+    "url": "https://www.orange-business.com/be-en/solutions/connectivity/lan-management",
+    "description": {
+      "en": "A fully managed, secure and high-performance local network, supporting digital transformation across your sites.",
+      "fr": "Un réseau local entièrement managé, sécurisé et performant, au service de la transformation digitale de vos sites.",
+      "es": "Una red local totalmente gestionada, segura y de alto rendimiento, al servicio de la transformación digital de sus sedes.",
+      "it": "Una rete locale completamente gestita, sicura e ad alte prestazioni, al servizio della trasformazione digitale dei vostri siti.",
+      "gr": "Ένα πλήρως διαχειριζόμενο, ασφαλές και υψηλής απόδοσης τοπικό δίκτυο για τη στήριξη του ψηφιακού μετασχηματισμού των εγκαταστάσεών σας."
+    },
+    "keywords": [
+      "lan",
+      "network",
+      "managed",
+      "secure",
+      "performance",
+      "local network",
+      "tag_lan"
+    ],
+    "category_type": "Solution",
+    "primary_category_name": "Connectivity",
+    "sub_category_name": "LAN"
+  },
+  {
+    "name": "Business VPN Galerie",
+    "url": "https://www.orange-business.com/be-en/solutions/connectivity/business-vpn-galerie",
+    "description": {
+      "en": "Extend your secure corporate network into the cloud to access SaaS and partner applications safely.",
+      "fr": "Étendez votre réseau d’entreprise sécurisé vers le cloud pour accéder en toute sécurité à vos applications SaaS et partenaires.",
+      "es": "Amplíe su red empresarial segura en la nube para acceder de forma segura a aplicaciones SaaS y de partners.",
+      "it": "Estendete la vostra rete aziendale sicura nel cloud per accedere in modo sicuro alle applicazioni SaaS e dei partner.",
+      "gr": "Επεκτείνετε το ασφαλές εταιρικό σας δίκτυο στο cloud για ασφαλή πρόσβαση σε εφαρμογές SaaS και συνεργατών."
+    },
+    "keywords": [
+      "vpn",
+      "corporate network",
+      "cloud",
+      "saas",
+      "partner applications",
+      "secure access",
+      "tag_vpn"
+    ],
+    "category_type": "Solution",
+    "primary_category_name": "Connectivity",
+    "sub_category_name": "VPN"
+  }
+
 ];
 
 function getAvailableKeywords(selected, offers) {
