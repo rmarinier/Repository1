@@ -263,19 +263,50 @@ export default function App() {
     if (!prompt) return;
 
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
     
-    const promptKeywords = prompt.toLowerCase().split(/\s+/);
-    const extracted = Array.from(allKeywordsFromOffers).filter(kw => promptKeywords.some(pk => kw.toLowerCase().includes(pk) && pk.length > 2));
-    
-    handleReset();
-    if(extracted.length > 0) {
-      const firstKw = extracted[0];
-      const personaKey = Object.keys(personas).find(p => offers.some(o => o.associated_keywords.includes(firstKw) && personas[p].tags.some(tag => o.associated_keywords.includes(tag)))) || 'business';
-      setActivePersonaKey(personaKey);
-      
-      const sortedExtracted = extracted.sort((a, b) => (T[a] || a).localeCompare(T[b] || b, language));
-      setSelected(sortedExtracted);
+    let chatHistory = [];
+    chatHistory.push({ role: "user", parts: [{ text: `From the user prompt "${prompt}", extract up to 5 relevant keywords from the following list. Return only a JSON object with a "keywords" array: [${Array.from(allKeywordsFromOffers).join(', ')}]` }] });
+
+    const payload = {
+      contents: chatHistory,
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            "keywords": { "type": "ARRAY", "items": { "type": "STRING" } }
+          }
+        }
+      }
+    };
+    const apiKey = "" 
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        
+        let extracted = [];
+        if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
+            const parsed = JSON.parse(result.candidates[0].content.parts[0].text);
+            extracted = parsed.keywords || [];
+        }
+
+        handleReset();
+        if(extracted.length > 0) {
+          const firstKw = extracted[0];
+          const personaKey = Object.keys(personas).find(p => offers.some(o => o.associated_keywords.includes(firstKw) && personas[p].tags.some(tag => o.associated_keywords.includes(tag)))) || 'business';
+          setActivePersonaKey(personaKey);
+          
+          const sortedExtracted = extracted.sort((a, b) => (T[a] || a).localeCompare(T[b] || b, language));
+          setSelected(sortedExtracted);
+        }
+    } catch (error) {
+        console.error("Error calling Gemini API:", error);
     }
     
     setIsLoading(false);
