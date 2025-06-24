@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { Sparkles, MessageCircle, X, RotateCcw, Send, Mic, Paperclip, FileText, CheckCircle, Search, Headset, Phone, MessageSquare, Mail, PhoneForwarded, CalendarClock, ArrowLeft, LifeBuoy } from 'lucide-react';
+import { Sparkles, X, RotateCcw, Send, Mic, Paperclip, CheckCircle, Search, Headset, Phone, MessageSquare, Mail, PhoneForwarded, CalendarClock, ArrowLeft, LifeBuoy, ShoppingCart, PlusCircle, Trash2 } from 'lucide-react';
 
 // --- DATABASE SIMULATION (Updated from user's Excel file) ---
 const csvData = `
@@ -46,6 +46,7 @@ const csvData = `
 "O045","Cyber-résilience","Expertise","Security","Consulting","Build a comprehensive strategy to anticipate, protect, detect, and respond to cyber threats, ensuring business continuity.","https://www.orange-business.com/be-en/expertise/cyber-resilience","cyber resilience,business continuity,disaster recovery,incident response,tag_securite_globale",
 `;
 
+// This function parses the CSV data into an array of offer objects.
 function parseCsv(csv) {
     const lines = csv.trim().split('\n').slice(1);
     const headers = ["Offer_ID","Offer_Name","Category_Type","Primary_Category_Name","Sub_Category_Name","Description","URL","Associated_Keywords","Partner_Name"];
@@ -53,6 +54,7 @@ function parseCsv(csv) {
     const offersMap = new Map();
 
     lines.forEach(line => {
+        // Regex to handle quoted values that might contain commas
         const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)?.map(val => val.replace(/^"|"$/g, '')) || [];
         
         if (values.length === 0) return;
@@ -64,6 +66,7 @@ function parseCsv(csv) {
             headers.forEach((header, i) => {
                 let key = header.toLowerCase();
                 let value = values[i] || '';
+                // Keywords are split into an array for easier filtering
                 if (key === 'associated_keywords') {
                     value = value.split(',').map(kw => kw.trim()).filter(Boolean);
                 }
@@ -79,6 +82,7 @@ function parseCsv(csv) {
 
 const offers = parseCsv(csvData);
 
+// --- TRANSLATIONS & CONFIGURATION ---
 const translations = {
     fr: {
         // Keywords
@@ -114,8 +118,13 @@ const translations = {
         'ui_faq_prompt_1': 'Comment configurer mon SD-WAN ?',
         'ui_faq_prompt_2': 'Quelles sont les options de sécurité pour ma flotte mobile ?',
         'ui_faq_prompt_3': 'Je n\'arrive pas à accéder à mon espace client.',
+        'ui_add_to_cart': 'Ajouter au panier',
+        'ui_cart_title': 'Votre Panier',
+        'ui_cart_empty': 'Votre panier est vide.',
+        'ui_cart_checkout': 'Passer la commande',
 
-        // Offers translation
+
+        // Offers translation (example)
         offers: {
             "O001":{ name: "Workplace Together [Webex]", desc: "Outils de téléphonie et de collaboration Cisco gérés par Orange. Transforme la téléphonie traditionnelle en communications unifiées modernes." },
             "O002":{ name: "Intégration de services multi-sources (MSI)", desc: "Gérez de manière centralisée toutes les dépenses et les performances de vos services informatiques." },
@@ -125,10 +134,11 @@ const translations = {
         }
     },
     en: {
-       // Auto-populating EN translations
+        // Auto-populating EN translations
     }
 };
 
+// Auto-populate English translations from the source data
 translations.en.offers = offers.reduce((acc, offer) => {
     acc[offer.offer_id] = { name: offer.offer_name, desc: offer.description };
     return acc;
@@ -167,8 +177,13 @@ translations.en.ui_faq_subtitle = 'Ask me anything about our products, services,
 translations.en.ui_faq_prompt_1 = 'How do I configure my SD-WAN?';
 translations.en.ui_faq_prompt_2 = 'What are the security options for my mobile fleet?';
 translations.en.ui_faq_prompt_3 = 'I can\'t access my customer portal.';
+translations.en.ui_add_to_cart = 'Add to Cart';
+translations.en.ui_cart_title = 'Your Cart';
+translations.en.ui_cart_empty = 'Your cart is empty.';
+translations.en.ui_cart_checkout = 'Proceed to Checkout';
 
 
+// Configuration for different user personas, defining their associated keywords and color themes.
 const personas = {
     cio: { color: { text: 'text-blue-800', bg: 'bg-blue-50', border: 'border-blue-200', hoverBg: 'hover:bg-blue-100', hoverBorder: 'hover:border-blue-400', selectedBg: 'bg-blue-500' }, tags: ['sd-wan', 'cloud', 'internet access', 'lan', 'wan', 'cloud connectivity', 'sase', 'network security', 'cisco', 'cloud management', 'iaas', 'sovereign cloud', 'it services', 'observability'] },
     ciso: { color: { text: 'text-purple-800', bg: 'bg-purple-50', border: 'border-purple-200', hoverBg: 'hover:bg-purple-100', hoverBorder: 'hover:border-purple-400', selectedBg: 'bg-purple-500' }, tags: ['cybersecurity', 'sase', 'sécurité mobile', 'threat detection', 'data protection', 'network security', 'incident response', 'cyber resilience', 'endpoint security'] },
@@ -182,6 +197,7 @@ const personas = {
 
 const allKeywordsFromOffers = new Set(offers.flatMap(o => o.associated_keywords));
 
+// This function generates the initial set of keywords displayed to the user.
 function generateInitialKeywords(minOccurrences = 3) {
     const keywordOfferCount = {};
     allKeywordsFromOffers.forEach(kw => {
@@ -197,6 +213,7 @@ function generateInitialKeywords(minOccurrences = 3) {
     
     const keywordsPerPersona = 5;
 
+    // Prioritize keywords based on personas to show a relevant selection.
     for (const personaKey of personaOrder) {
         const personaTags = personas[personaKey].tags;
         
@@ -223,7 +240,7 @@ function generateInitialKeywords(minOccurrences = 3) {
     return shuffledKeywords;
 }
 
-
+// This function determines which keywords are available for refinement based on the current selection.
 function getAvailableKeywords(selected, offers) {
   const filteredOffers = selected.length > 0 
     ? offers.filter(offer => selected.every(sel => offer.associated_keywords.includes(sel)))
@@ -246,11 +263,13 @@ function getAvailableKeywords(selected, offers) {
     .slice(0, 15);
 }
 
+// A simple component to display language flags.
 const LanguageFlag = ({ lang }) => {
     const flags = { fr: '🇫🇷', en: '🇬🇧' };
     return <span className="text-xl">{flags[lang] || '🌐'}</span>;
 };
 
+// Defines proactive message triggers based on the current URL.
 const proactiveTriggers = {
     'https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex': {
       messageKey: 'proactive_webex_licenses',
@@ -260,6 +279,7 @@ const proactiveTriggers = {
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
+  // --- STATE MANAGEMENT ---
   const [selected, setSelected] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [language, setLanguage] = useState("fr");
@@ -268,47 +288,62 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [currentView, setCurrentView] = useState('initial');
   
+  // State for simulating page navigation
   const [currentUrl, setCurrentUrl] = useState('https://www.orange-business.com/be-en/');
   const [hasProactiveMessage, setHasProactiveMessage] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
   
+  // E-commerce state
+  const [cart, setCart] = useState([]);
+  const [isCartVisible, setIsCartVisible] = useState(false);
+
+  // --- EFFECTS ---
+  
+  // Generate initial keywords when the chat is opened for the first time.
   useEffect(() => {
     if (chatOpen && initialKeywords.length === 0) {
         setInitialKeywords(generateInitialKeywords(3));
     }
   }, [chatOpen, initialKeywords]);
   
+  // Check for proactive message triggers when the simulated URL changes.
   useEffect(() => {
     const trigger = proactiveTriggers[currentUrl];
     setHasProactiveMessage(!!trigger);
   }, [currentUrl]);
 
 
+  // --- MEMOIZED VALUES ---
   const T = translations[language] || translations.en;
 
+  // Filter offers based on selected keywords.
   const filteredOffers = useMemo(() => selected.length
     ? offers.filter((offer) => selected.every((kw) => offer.associated_keywords.includes(kw)))
     : [], [selected]);
     
+  // Get available keywords for refinement.
   const availableKeywords = useMemo(() => getAvailableKeywords(selected, offers), [selected]);
 
+  // Sort selected keywords alphabetically for consistent display.
+  const sortedSelected = useMemo(() => {
+    return [...selected].sort((a, b) => (T[a] || a).localeCompare(T[b] || b, language));
+  }, [selected, language, T]);
+
+  // --- HANDLERS ---
   const handleSelectKeyword = (word, personaKey) => {
     if (!selected.includes(word)) {
         if (selected.length === 0 && personaKey) {
+            // Set the active persona when the first keyword is selected.
             setActivePersonaKey(personaKey);
         }
         setSelected((prev) => [...prev, word]);
     }
   };
   
-  const sortedSelected = useMemo(() => {
-    return [...selected].sort((a, b) => (T[a] || a).localeCompare(T[b] || b, language));
-  }, [selected, language, T]);
-
-
   const handleDeselectKeyword = (word) => {
     setSelected((prev) => {
         const newSelected = prev.filter((kw) => kw !== word);
+        // Reset persona if no keywords are selected.
         if (newSelected.length === 0) {
             setActivePersonaKey(null);
         }
@@ -316,6 +351,7 @@ export default function App() {
     });
   };
   
+  // Reset the state of the chat to its initial view.
   const handleReset = () => {
     setSelected([]);
     setActivePersonaKey(null);
@@ -330,13 +366,15 @@ export default function App() {
       if(view !== 'initial') {
         setCurrentView(view);
       } else if (trigger) {
-          setCurrentView('proactive_message');
+        // If there's a proactive trigger for the current URL, show the message.
+        setCurrentView('proactive_message');
       } else {
-          setCurrentView('initial');
+        setCurrentView('initial');
       }
   }
   const handleCloseChat = () => {
       setChatOpen(false);
+      // Reset the state after the closing animation finishes.
       setTimeout(() => {
           handleReset();
       }, 300);
@@ -344,18 +382,20 @@ export default function App() {
 
   const allLanguages = ["fr", "en"]; 
 
+  // Handle the submission of the user's natural language prompt.
   const handlePromptSubmit = async (e) => {
     e.preventDefault();
     const prompt = e.target.elements.prompt.value;
     if (!prompt) return;
     setIsLoading(true);
     
+    // Call the Gemini API to extract keywords from the user's prompt.
     let chatHistory = [{ role: "user", parts: [{ text: `From the user prompt "${prompt}", extract up to 5 relevant keywords from the following list. Return only a JSON object with a "keywords" array: [${Array.from(allKeywordsFromOffers).filter(k => !k.startsWith('tag_')).join(', ')}]` }] }];
     const payload = {
       contents: chatHistory,
       generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "keywords": { "type": "ARRAY", "items": { "type": "STRING" } } } } }
     };
-    const apiKey = "" 
+    const apiKey = "" // API key is handled by the environment, left blank here.
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     try {
@@ -378,6 +418,7 @@ export default function App() {
         
         handleReset();
         if(extracted.length > 0) {
+          // Set the extracted keywords as the current selection.
           const firstKw = extracted[0];
           const personaKey = Object.keys(personas).find(p => personas[p].tags.includes(firstKw)) || 'cio';
           setActivePersonaKey(personaKey);
@@ -391,6 +432,7 @@ export default function App() {
     e.target.elements.prompt.value = '';
   }
   
+  // Handle contact requests, showing a confirmation message.
   const handleContactRequest = () => {
     setCurrentView('contact_confirmation');
     setTimeout(() => {
@@ -402,21 +444,95 @@ export default function App() {
     e.preventDefault();
     handleContactRequest();
   }
+
+  // --- E-COMMERCE HANDLERS ---
+  const addToCart = (offer) => {
+    setCart(prevCart => {
+        // Prevent adding duplicates
+        if (prevCart.find(item => item.offer_id === offer.offer_id)) {
+            return prevCart;
+        }
+        return [...prevCart, offer];
+    });
+  };
+
+  const removeFromCart = (offerId) => {
+      setCart(prevCart => prevCart.filter(item => item.offer_id !== offerId));
+  };
   
   const showResultsPanel = selected.length > 0;
 
   // --- RENDER ---
   return (
     <div className="relative min-h-screen bg-gray-100 text-gray-900 p-8 flex flex-col items-center font-sans">
-      <div className="w-full max-w-2xl text-center">
-        <h1 className="text-3xl font-bold">Page d'Exemple</h1>
-        <p className="mt-2 text-lg text-gray-600">Simulez la navigation pour déclencher l'agent proactif.</p>
-        <div className="flex flex-wrap justify-center gap-4 mt-8">
-            <button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.endsWith('/') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page d'accueil</button>
-            <button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.includes('workplace-together-webex') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page Webex</button>
-        </div>
+      <div className="w-full max-w-5xl">
+            <header className="relative w-full flex justify-between items-center mb-4">
+                <div className="flex-1"></div> {/* Spacer */}
+                <div className="flex-1 text-center">
+                    <h1 className="text-3xl font-bold">Page d'Exemple</h1>
+                </div>
+                <div className="flex-1 flex justify-end">
+                     {/* Cart Button */}
+                    <button onClick={() => setIsCartVisible(!isCartVisible)} className="relative p-2 text-gray-600 hover:text-orange-500 transition-colors" aria-label="Voir le panier">
+                        <ShoppingCart className="w-7 h-7" />
+                        {cart.length > 0 && (
+                            <span className="absolute -top-1 -right-1 block h-5 w-5 rounded-full ring-2 ring-gray-100 bg-red-500 text-white text-xs flex items-center justify-center">
+                                {cart.length}
+                            </span>
+                        )}
+                    </button>
+                </div>
+            </header>
+             <div className="text-center">
+                <p className="mt-2 text-lg text-gray-600">Simulez la navigation pour déclencher l'agent proactif.</p>
+                <div className="flex flex-wrap justify-center gap-4 mt-8">
+                    <button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.endsWith('/') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page d'accueil</button>
+                    <button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.includes('workplace-together-webex') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page Webex</button>
+                </div>
+            </div>
       </div>
 
+       {/* Cart Panel */}
+       <AnimatePresence>
+        {isCartVisible && (
+            <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                className="absolute top-24 right-8 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-40"
+            >
+                <div className="p-4 border-b flex justify-between items-center">
+                    <h3 className="font-bold text-lg">{T.ui_cart_title}</h3>
+                    <button onClick={() => setIsCartVisible(false)} className="text-gray-500 hover:text-red-600"><X size={20}/></button>
+                </div>
+                <div className="p-4 max-h-96 overflow-y-auto">
+                    {cart.length === 0 ? (
+                        <p className="text-gray-500 text-center py-4">{T.ui_cart_empty}</p>
+                    ) : (
+                        <div className="space-y-3">
+                            {cart.map(item => (
+                                <div key={item.offer_id} className="flex items-center justify-between text-sm">
+                                    <span className="flex-1 pr-2">{(T.offers && T.offers[item.offer_id]?.name) || item.offer_name}</span>
+                                    <button onClick={() => removeFromCart(item.offer_id)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50" aria-label="Supprimer l'article">
+                                        <Trash2 size={16}/>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                {cart.length > 0 && (
+                     <div className="p-4 border-t bg-gray-50 rounded-b-xl">
+                        <button className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors">
+                            {T.ui_cart_checkout}
+                        </button>
+                    </div>
+                )}
+            </motion.div>
+        )}
+    </AnimatePresence>
+
+      {/* The main chat widget container */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
         <div className="relative flex items-center justify-center w-20 h-20">
             {!chatOpen && (
@@ -447,6 +563,7 @@ export default function App() {
           >
            <LayoutGroup> 
             <motion.div layout className={`flex flex-1 min-h-0 transition-all duration-500 ease-in-out ${showResultsPanel ? 'w-[48rem]' : 'w-[36rem]'}`}>
+              {/* Main chat panel */}
               <motion.div layout="position" className="flex-1 flex flex-col min-w-[24rem] max-w-lg">
                 <div className="flex justify-between items-center flex-shrink-0 p-4 border-b border-gray-200">
                   <div className="flex gap-2">
@@ -462,9 +579,11 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* Main content area, switching between views */}
                 <div className="overflow-y-auto flex-grow">
                   <AnimatePresence mode="wait">
                     {(() => {
+                        // View: Initial state with keyword suggestions
                         if (currentView === 'initial' && selected.length === 0) {
                             return (
                                 <motion.div key="initial-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
@@ -476,12 +595,13 @@ export default function App() {
                                         ))}
                                     </div>
                                     <div className="mt-4 pt-4 border-t border-gray-200">
-                                        <button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-semibold"><LifeBuoy className="text-orange-500"/>FAQ / Aide en ligne</button>
+                                      <button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-semibold"><LifeBuoy className="text-orange-500"/>FAQ / Aide en ligne</button>
                                     </div>
                                 </motion.div>
                             )
                         }
 
+                        // View: Keyword refinement after selection
                         if(selected.length > 0) {
                             return (
                                 <motion.div key="refinement-view" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: {delay: 0.2} }} exit={{ opacity: 0 }}>
@@ -491,23 +611,24 @@ export default function App() {
                                         <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleDeselectKeyword(word)} className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full text-white ${personas[activePersonaKey]?.color.selectedBg || 'bg-gray-500'} hover:bg-red-500 transition-colors shadow-md`} title={`Retirer '${T[word] || word}'`}>
                                           {T[word] || word} <X className="w-3 h-3" />
                                         </motion.button>
-                                      ))}
-                                      </AnimatePresence>
-                                   </motion.div>
-                                   <div className="p-4">
-                                       { (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
-                                       <div className="flex flex-wrap gap-2">
-                                           {availableKeywords.map((word, index) => (
-                                               <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border transition-colors ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg} ${personas[activePersonaKey]?.color.hoverBorder} flex items-center gap-1`}>
-                                                   {T[word] || word}
-                                               </motion.button>
-                                           ))}
-                                       </div>
-                                   </div>
+                                     ))}
+                                     </AnimatePresence>
+                                  </motion.div>
+                                  <div className="p-4">
+                                      { (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
+                                      <div className="flex flex-wrap gap-2">
+                                          {availableKeywords.map((word, index) => (
+                                              <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border transition-colors ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg} ${personas[activePersonaKey]?.color.hoverBorder} flex items-center gap-1`}>
+                                                  {T[word] || word}
+                                              </motion.button>
+                                          ))}
+                                      </div>
+                                  </div>
                                 </motion.div>
                             )
                         }
                         
+                        // Other views
                         switch(currentView) {
                             case 'contact':
                                 return (
@@ -566,6 +687,7 @@ export default function App() {
                   </AnimatePresence>
                 </div>
                 
+                {/* Prompt input form */}
                 <div className="p-3 mt-auto border-t border-gray-200 bg-white">
                   <form onSubmit={handlePromptSubmit} className="relative flex items-center">
                       <input type="text" name="prompt" disabled={isLoading} placeholder={T.ui_prompt_placeholder} className="w-full pl-4 pr-32 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow disabled:bg-gray-100 text-sm"/>
@@ -581,6 +703,7 @@ export default function App() {
                 </div>
               </motion.div>
 
+              {/* Results panel (appears when offers are filtered) */}
               <AnimatePresence>
               {showResultsPanel && (
                 <motion.div 
@@ -596,10 +719,15 @@ export default function App() {
                             {filteredOffers.length} {filteredOffers.length > 1 ? T.ui_results_for : T.ui_result_for}
                           </p>
                             {filteredOffers.map((offer, index) => (
-                                <motion.a key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }} href={offer.url} target="_blank" rel="noopener noreferrer" className="block border border-gray-200 p-3 rounded-lg hover:bg-white hover:shadow-lg hover:border-orange-300 transition-all duration-200">
-                                  <p className={`font-semibold text-orange-600 underline`}>{(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}</p>
-                                  <p className="text-sm text-gray-700 mt-1">{(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}</p>
-                                </motion.a>
+                                <motion.div key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }} className="bg-white border border-gray-200 p-3 rounded-lg hover:shadow-lg hover:border-orange-300 transition-all duration-200 flex flex-col justify-between">
+                                  <div>
+                                    <a href={offer.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-orange-600 hover:underline">{(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}</a>
+                                    <p className="text-sm text-gray-700 mt-1">{(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}</p>
+                                  </div>
+                                  <button onClick={() => addToCart(offer)} className="mt-3 w-full bg-orange-100 text-orange-800 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-200 transition-colors text-sm flex items-center justify-center gap-2">
+                                    <PlusCircle size={16} /> {T.ui_add_to_cart}
+                                  </button>
+                                </motion.div>
                             ))}
                         </div>
                       ) : (
