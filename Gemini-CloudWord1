@@ -64,9 +64,7 @@ function parseCsv(csv) {
             headers.forEach((header, i) => {
                 let key = header.toLowerCase();
                 let value = values[i] || '';
-                if (key === 'offer_name' || key === 'description') {
-                     value = { en: value, fr: value, es: value, it: value, gr: value };
-                }
+                // **FIX**: Ensure associated_keywords is always an array
                 if (key === 'associated_keywords') {
                     value = value.split(',').map(kw => kw.trim()).filter(Boolean);
                 }
@@ -84,12 +82,14 @@ const offers = parseCsv(csvData);
 
 const translations = {
     fr: {
+        // Keywords
         'sd-wan': 'SD-WAN', 'lan': 'LAN', 'wan': 'WAN', 'cybersecurity': 'Cybersécurité', 'sase': 'SASE', 
         'genai': 'IA Générative', 'cloud': 'Cloud', 'contact center': 'Contact Center',
         'internet access': 'Accès Internet', 'ai': 'Intelligence Artificielle',
         'gestion de flotte': 'Gestion de Flotte', '5g': '5G', 'mdm': 'MDM', 'iot': 'IoT', 'telephony': 'Téléphonie',
         'collaboration': 'Collaboration', 'data platform': 'Plateforme Data', 'cdp': 'CDP', 'analytics': 'Analytics', 'network security': 'Sécurité Réseau', 'voip': 'Voix sur IP',
         
+        // UI Text
         'ui_results_for': 'résultats pour', 'ui_result_for': 'résultat pour',
         'ui_refine_search': 'Affiner votre recherche :', 'ui_prompt_placeholder': 'Décrivez votre besoin...',
         'ui_no_match': 'Aucune offre ne correspond à cette sélection.',
@@ -99,25 +99,82 @@ const translations = {
         'ui_upload_summary_title': 'Analyse terminée !',
         'ui_upload_summary_desc': 'J\'ai identifié des besoins en Cloud Hybride et Cyberdéfense. Pour vous mettre en relation avec un expert, veuillez compléter ces informations :',
         'ui_upload_submit': 'Contacter un expert', 'ui_upload_success': 'Merci ! Un expert vous contactera bientôt.',
+
+        // Offers translation
+        offers: {
+            "O001":{ name: "Workplace Together [Webex]", desc: "Outils de téléphonie et de collaboration Cisco gérés par Orange. Transforme la téléphonie traditionnelle en communications unifiées modernes." },
+            "O002":{ name: "Intégration de services multi-sources (MSI)", desc: "Gérez de manière centralisée toutes les dépenses et les performances de vos services informatiques." },
+            "O003":{ name: "Évaluation de l'architecture Data & IA", desc: "Optimiser la création de valeur grâce à une plateforme de données moderne et efficace." },
+            "O004":{ name: "Centre d'Excellence IA (CoE)", desc: "Donnez à votre équipe les moyens d'accélérer la transformation de l'IA grâce aux conseils d'experts." },
+            "O005":{ name: "MVP Cloud", desc: "Pérennisez votre activité avec une plateforme de données Cloud rentable." },
+            "O006":{ name: "Stratégie IA & Priorisation des cas d'usage", desc: "Libérez le pouvoir de transformation de l'IA grâce à une priorisation stratégique et des informations exploitables." },
+            "O007":{ name: "Accélérateur de Données CX", desc: "Libérez le potentiel supplémentaire de vos données d'expérience client (CX)." },
+            "O008":{ name: "Lancement de l'Expérience Client du Futur", desc: "Démarrez votre parcours vers des expériences client transparentes et unifiées." },
+            "O009":{ name: "Plateforme de Données Client (CDP)", desc: "Transformez les expériences client avec des décisions basées sur les données via une plateforme unifiée." },
+            "O010":{ name: "Accès au Centre de Contact", desc: "Recevez des appels du monde entier et gérez-les en temps réel." },
+            "O011":{ name: "Gestion des Actifs et des Données", desc: "Gérez le cycle de vie de vos actifs, contrats de support, logiciels et services." },
+            "O012":{ name: "SD-Branch Flexible", desc: "Gérez votre réseau d'entreprise dans le cloud avec des coûts réduits et une sécurité transparente (Cisco Meraki)." },
+            "O013":{ name: "Internet Platinum", desc: "Un accès Internet dédié avec une bande passante 100% garantie sur le réseau Orange." },
+            "O014":{ name: "Infrastructures Cloud", desc: "Gagnez en agilité, résilience et performance avec le cloud." },
+            "O015":{ name: "Cloud Connect à la demande", desc: "Créez et gérez vos connexions au cloud en toute autonomie." },
+            "O016":{ name: "Anticipate (Cybersécurité)", desc: "Cybersécurité pro-active : anticipez et prévenez les menaces numériques." },
+            "O017":{ name: "Detect and Respond (Cybersécurité)", desc: "Cybersécurité complète en détectant les menaces en temps réel et en répondant rapidement pour minimiser les dommages." },
+            "O018":{ name: "Protect (Cybersécurité)", desc: "Ensemble complet de solutions de protection pour sécuriser les terminaux, les réseaux et les données." },
+            "O019":{ name: "SD-WAN Flexible (Cisco)", desc: "Performance, gestion simplifiée, sécurité et accès cloud optimisé avec Cisco Catalyst SD-WAN." },
+            "O020":{ name: "SASE (Secure Access Service Edge)", desc: "Permettez à vos équipes de travailler ensemble de n'importe où avec un réseau distribué et sécurisé." },
+            "O021":{ name: "Suite d'Engagement Unifié - Genesys", desc: "Améliorez votre expérience client en orchestrant l'ensemble du parcours client. Basé sur le cloud et l'IA." },
+            "O022":{ name: "Suite d'Engagement Unifié - NICE", desc: "Une plateforme d'expérience client cloud avec des capacités omnicanales, des analyses et de l'automatisation." },
+            "E001":{ name: "Renforcer la gouvernance des données", desc: "Permettre une utilisation sécurisée et conforme des données dans toute l'organisation." },
+            "E002":{ name: "Construire une plateforme de données évolutive et accessible", desc: "Centralisez les données pour un accès plus facile, une meilleure intégration et des informations plus rapides." },
+            "E003":{ name: "Définir une stratégie de données gagnante", desc: "Établissez une stratégie de données claire et exploitable qui guide l'utilisation des données." },
+            "E004":{ name: "Cultiver une culture axée sur les données", desc: "Créez un environnement où les données sont reconnues comme un atout stratégique." },
+            "E005":{ name: "Activer les insights avec la GenAI et l'IA", desc: "Dépassez le battage médiatique de l'IA avec une approche pragmatique. Déployez l'IA à grande échelle." },
+            "O034":{ name: "Gestion de Flotte Mobile", desc: "Optimisez la gestion, le coût et la sécurité de l'ensemble de votre flotte mobile." },
+            "O035":{ name: "Connectivité 5G pour Entreprises", desc: "Ouvrez de nouvelles possibilités avec une connectivité 5G à haute vitesse et faible latence." },
+            "O036":{ name: "Gestion des appareils mobiles (MDM)", desc: "Sécurisez et gérez les smartphones et tablettes de vos employés avec nos solutions MDM." },
+            "O037":{ name: "Réseau 5G Privé", desc: "Déployez un réseau 5G privé et dédié pour votre campus industriel ou vos opérations critiques." },
+            "O038":{ name: "IoT Connect", desc: "Connectez vos appareils IoT en toute transparence avec notre plateforme de connectivité IoT mondiale et gérée." },
+            "O039":{ name: "Gestion des appareils IoT", desc: "Gérez le cycle de vie de vos appareils IoT, du déploiement à la mise au rebut, sur une seule plateforme." },
+            "O040":{ name: "Observabilité avec ThousandEyes", desc: "Obtenez une visibilité de bout en bout sur les performances de votre réseau et de vos applications avec Cisco ThousandEyes." },
+            "O041":{ name: "Cloud Public - Flexible Engine", desc: "Une plateforme de cloud public fiable et sécurisée basée sur OpenStack, hébergée en Europe." },
+            "O042":{ name: "Services de Cloud Public Managés", desc: "Laissez nos experts gérer vos environnements de cloud public (AWS, Azure, Google Cloud) pour optimiser les coûts et la sécurité." },
+            "O043":{ name: "Gestion de la Mobilité d'Entreprise (EMM)", desc: "Une solution complète pour gérer et sécuriser vos actifs et applications mobiles (EMM)." },
+            "O044":{ name: "Voix sur IP", desc: "Modernisez la téléphonie de votre entreprise avec nos solutions de Voix sur IP flexibles et évolutives." },
+            "O045":{ name: "Cyber-résilience", desc: "Construisez une stratégie complète pour anticiper, protéger, détecter et répondre aux cybermenaces." }
+        }
     },
     en: {
-        'sd-wan': 'SD-WAN', 'lan': 'LAN', 'wan': 'WAN', 'cybersecurity': 'Cybersecurity', 'sase': 'SASE', 
-        'genai': 'Generative AI', 'cloud': 'Cloud', 'contact center': 'Contact Center',
-        'internet access': 'Internet Access', 'ai': 'Artificial Intelligence',
-        'gestion de flotte': 'Fleet Management', '5g': '5G', 'mdm': 'MDM', 'iot': 'IoT', 'telephony': 'Telephony',
-        'collaboration': 'Collaboration', 'data platform': 'Data Platform', 'cdp': 'CDP', 'analytics': 'Analytics', 'network security': 'Network Security', 'voip': 'Voice over IP',
-
-        'ui_results_for': 'results for', 'ui_result_for': 'result for',
-        'ui_refine_search': 'Refine your search:', 'ui_prompt_placeholder': 'Describe your need...',
-        'ui_no_match': 'No offers match this selection.',
-        'ui_upload_title': 'Analyze a document',
-        'ui_upload_subtitle': 'Upload a Request for Proposal (RFP) and I will provide an initial analysis.',
-        'ui_upload_cta': 'Choose a file', 'ui_upload_analyzing': 'Analyzing...',
-        'ui_upload_summary_title': 'Analysis complete!',
-        'ui_upload_summary_desc': 'I\'ve identified needs in Hybrid Cloud and Cybersecurity. To connect you with an expert, please complete this information:',
-        'ui_upload_submit': 'Contact an expert', 'ui_upload_success': 'Thank you! An expert will contact you shortly.',
+       // Auto-populating EN translations
     }
 };
+
+// **FIX**: Auto-populate English translations from the source 'offers' array
+translations.en.offers = offers.reduce((acc, offer) => {
+    acc[offer.offer_id] = { name: offer.offer_name, desc: offer.description };
+    return acc;
+}, {});
+
+// **FIX**: Add all UI translations to the english object
+Object.keys(translations.fr).forEach(key => {
+    if(!key.startsWith('ui_') && !translations.en[key]) {
+        translations.en[key] = key; // Fallback for keywords
+    }
+});
+translations.en.ui_results_for = 'results for';
+translations.en.ui_result_for = 'result for';
+translations.en.ui_refine_search = 'Refine your search:';
+translations.en.ui_prompt_placeholder = 'Describe your need...';
+translations.en.ui_no_match = 'No offers match this selection.';
+translations.en.ui_upload_title = 'Analyze a document';
+translations.en.ui_upload_subtitle = 'Upload a Request for Proposal (RFP) and I will provide an initial analysis.';
+translations.en.ui_upload_cta = 'Choose a file';
+translations.en.ui_upload_analyzing = 'Analyzing...';
+translations.en.ui_upload_summary_title = 'Analysis complete!';
+translations.en.ui_upload_summary_desc = "I've identified needs in Hybrid Cloud and Cybersecurity. To connect you with an expert, please complete this information:";
+translations.en.ui_upload_submit = 'Contact an expert';
+translations.en.ui_upload_success = 'Thank you! An expert will contact you shortly.';
+
+
 
 const personas = {
     cio: { color: { text: 'text-blue-800', bg: 'bg-blue-50', border: 'border-blue-200', hoverBg: 'hover:bg-blue-100', hoverBorder: 'hover:border-blue-400', selectedBg: 'bg-blue-500' }, tags: ['sd-wan', 'cloud', 'internet access', 'lan', 'wan', 'cloud connectivity', 'sase', 'network security', 'cisco', 'cloud management', 'iaas', 'sovereign cloud', 'it services', 'observability'] },
@@ -197,7 +254,7 @@ function getAvailableKeywords(selected, offers) {
 }
 
 const LanguageFlag = ({ lang }) => {
-    const flags = { fr: '🇫🇷', en: '🇬🇧' };
+    const flags = { fr: '�🇷', en: '🇬🇧' };
     return <span className="text-xl">{flags[lang] || '🌐'}</span>;
 };
 
@@ -450,8 +507,8 @@ export default function App() {
                           </p>
                             {filteredOffers.map((offer, index) => (
                                 <motion.a key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }} href={offer.url} target="_blank" rel="noopener noreferrer" className="block border border-gray-200 p-3 rounded-lg hover:bg-white hover:shadow-lg hover:border-orange-300 transition-all duration-200">
-                                  <p className={`font-semibold text-orange-600 underline`}>{offer.offer_name[language] || offer.offer_name.en}</p>
-                                  <p className="text-sm text-gray-700 mt-1">{offer.description[language] || offer.description.en}</p>
+                                  <p className={`font-semibold text-orange-600 underline`}>{(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}</p>
+                                  <p className="text-sm text-gray-700 mt-1">{(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}</p>
                                 </motion.a>
                             ))}
                         </div>
@@ -474,3 +531,4 @@ export default function App() {
     </div>
   );
 }
+�
