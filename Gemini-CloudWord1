@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { Sparkles, MessageCircle, X, RotateCcw, Send, Mic, Paperclip, FileText, CheckCircle, Search, Headset, Phone, MessageSquare, Mail, PhoneForwarded, CalendarClock, ArrowLeft } from 'lucide-react';
+import { Sparkles, MessageCircle, X, RotateCcw, Send, Mic, Paperclip, FileText, CheckCircle, Search, Headset, Phone, MessageSquare, Mail, PhoneForwarded, CalendarClock, ArrowLeft, LifeBuoy } from 'lucide-react';
 
 // --- DATABASE SIMULATION (Updated from user's Excel file) ---
 const csvData = `
@@ -109,48 +109,19 @@ const translations = {
         'ui_contact_callback_schedule': 'Planifier un rappel',
         'ui_contact_confirm_callback': 'Confirmer le rappel',
         'ui_contact_request_received': 'Votre demande a bien été prise en compte.',
+        'ui_faq_title': 'Assistant d\'aide Orange Business',
+        'ui_faq_subtitle': 'Posez-moi n\'importe quelle question sur nos produits, services, ou sur votre compte.',
+        'ui_faq_prompt_1': 'Comment configurer mon SD-WAN ?',
+        'ui_faq_prompt_2': 'Quelles sont les options de sécurité pour ma flotte mobile ?',
+        'ui_faq_prompt_3': 'Je n\'arrive pas à accéder à mon espace client.',
 
         // Offers translation
         offers: {
             "O001":{ name: "Workplace Together [Webex]", desc: "Outils de téléphonie et de collaboration Cisco gérés par Orange. Transforme la téléphonie traditionnelle en communications unifiées modernes." },
             "O002":{ name: "Intégration de services multi-sources (MSI)", desc: "Gérez de manière centralisée toutes les dépenses et les performances de vos services informatiques." },
             "O003":{ name: "Évaluation de l'architecture Data & IA", desc: "Optimiser la création de valeur grâce à une plateforme de données moderne et efficace." },
-            "O004":{ name: "Centre d'Excellence IA (CoE)", desc: "Donnez à votre équipe les moyens d'accélérer la transformation de l'IA grâce aux conseils d'experts." },
-            "O005":{ name: "MVP Cloud", desc: "Pérennisez votre activité avec une plateforme de données Cloud rentable." },
-            "O006":{ name: "Stratégie IA & Priorisation des cas d'usage", desc: "Libérez le pouvoir de transformation de l'IA grâce à une priorisation stratégique et des informations exploitables." },
-            "O007":{ name: "Accélérateur de Données CX", desc: "Libérez le potentiel supplémentaire de vos données d'expérience client (CX)." },
-            "O008":{ name: "Lancement de l'Expérience Client du Futur", desc: "Démarrez votre parcours vers des expériences client transparentes et unifiées." },
-            "O009":{ name: "Plateforme de Données Client (CDP)", desc: "Transformez les expériences client avec des décisions basées sur les données via une plateforme unifiée." },
-            "O010":{ name: "Accès au Centre de Contact", desc: "Recevez des appels du monde entier et gérez-les en temps réel." },
-            "O011":{ name: "Gestion des Actifs et des Données", desc: "Gérez le cycle de vie de vos actifs, contrats de support, logiciels et services." },
-            "O012":{ name: "SD-Branch Flexible", desc: "Gérez votre réseau d'entreprise dans le cloud avec des coûts réduits et une sécurité transparente (Cisco Meraki)." },
-            "O013":{ name: "Internet Platinum", desc: "Un accès Internet dédié avec une bande passante 100% garantie sur le réseau Orange." },
-            "O014":{ name: "Infrastructures Cloud", desc: "Gagnez en agilité, résilience et performance avec le cloud." },
-            "O015":{ name: "Cloud Connect à la demande", desc: "Créez et gérez vos connexions au cloud en toute autonomie." },
-            "O016":{ name: "Anticipate (Cybersécurité)", desc: "Cybersécurité pro-active : anticipez et prévenez les menaces numériques." },
-            "O017":{ name: "Detect and Respond (Cybersécurité)", desc: "Cybersécurité complète en détectant les menaces en temps réel et en répondant rapidement pour minimiser les dommages." },
-            "O018":{ name: "Protect (Cybersécurité)", desc: "Ensemble complet de solutions de protection pour sécuriser les terminaux, les réseaux et les données." },
             "O019":{ name: "SD-WAN Flexible (Cisco)", desc: "Performance, gestion simplifiée, sécurité et accès cloud optimisé avec Cisco Catalyst SD-WAN." },
-            "O020":{ name: "SASE (Secure Access Service Edge)", desc: "Permettez à vos équipes de travailler ensemble de n'importe où avec un réseau distribué et sécurisé." },
-            "O021":{ name: "Suite d'Engagement Unifié - Genesys", desc: "Améliorez votre expérience client en orchestrant l'ensemble du parcours client. Basé sur le cloud et l'IA." },
-            "O022":{ name: "Suite d'Engagement Unifié - NICE", desc: "Une plateforme d'expérience client cloud avec des capacités omnicanales, des analyses et de l'automatisation." },
-            "E001":{ name: "Renforcer la gouvernance des données", desc: "Permettre une utilisation sécurisée et conforme des données dans toute l'organisation." },
-            "E002":{ name: "Construire une plateforme de données évolutive et accessible", desc: "Centralisez les données pour un accès plus facile, une meilleure intégration et des informations plus rapides." },
-            "E003":{ name: "Définir une stratégie de données gagnante", desc: "Établissez une stratégie de données claire et exploitable qui guide l'utilisation des données." },
-            "E004":{ name: "Cultiver une culture axée sur les données", desc: "Créez un environnement où les données sont reconnues comme un atout stratégique." },
-            "E005":{ name: "Activer les insights avec la GenAI et l'IA", desc: "Dépassez le battage médiatique de l'IA avec une approche pragmatique. Déployez l'IA à grande échelle." },
-            "O034":{ name: "Gestion de Flotte Mobile", desc: "Optimisez la gestion, le coût et la sécurité de l'ensemble de votre flotte mobile." },
-            "O035":{ name: "Connectivité 5G pour Entreprises", desc: "Ouvrez de nouvelles possibilités avec une connectivité 5G à haute vitesse et faible latence." },
-            "O036":{ name: "Gestion des appareils mobiles (MDM)", desc: "Sécurisez et gérez les smartphones et tablettes de vos employés avec nos solutions MDM." },
-            "O037":{ name: "Réseau 5G Privé", desc: "Déployez un réseau 5G privé et dédié pour votre campus industriel ou vos opérations critiques." },
-            "O038":{ name: "IoT Connect", desc: "Connectez vos appareils IoT en toute transparence avec notre plateforme de connectivité IoT mondiale et gérée." },
-            "O039":{ name: "Gestion des appareils IoT", desc: "Gérez le cycle de vie de vos appareils IoT, du déploiement à la mise au rebut, sur une seule plateforme." },
-            "O040":{ name: "Observabilité avec ThousandEyes", desc: "Obtenez une visibilité de bout en bout sur les performances de votre réseau et de vos applications avec Cisco ThousandEyes." },
-            "O041":{ name: "Cloud Public - Flexible Engine", desc: "Une plateforme de cloud public fiable et sécurisée basée sur OpenStack, hébergée en Europe." },
-            "O042":{ name: "Services de Cloud Public Managés", desc: "Laissez nos experts gérer vos environnements de cloud public (AWS, Azure, Google Cloud) pour optimiser les coûts et la sécurité." },
-            "O043":{ name: "Gestion de la Mobilité d'Entreprise (EMM)", desc: "Une solution complète pour gérer et sécuriser vos actifs et applications mobiles (EMM)." },
-            "O044":{ name: "Voix sur IP", desc: "Modernisez la téléphonie de votre entreprise avec nos solutions de Voix sur IP flexibles et évolutives." },
-            "O045":{ name: "Cyber-résilience", desc: "Construisez une stratégie complète pour anticiper, protéger, détecter et répondre aux cybermenaces." }
+            "O013":{ name: "Internet Platinum", desc: "Un accès Internet dédié avec une bande passante 100% garantie sur le réseau Orange." },
         }
     },
     en: {
@@ -191,6 +162,12 @@ translations.en.ui_contact_callback_now = 'Get a callback now';
 translations.en.ui_contact_callback_schedule = 'Schedule a callback';
 translations.en.ui_contact_confirm_callback = 'Confirm callback';
 translations.en.ui_contact_request_received = 'Your request has been received.';
+translations.en.ui_faq_title = 'Orange Business Help Assistant';
+translations.en.ui_faq_subtitle = 'Ask me anything about our products, services, or your account.';
+translations.en.ui_faq_prompt_1 = 'How do I configure my SD-WAN?';
+translations.en.ui_faq_prompt_2 = 'What are the security options for my mobile fleet?';
+translations.en.ui_faq_prompt_3 = 'I can\'t access my customer portal.';
+
 
 const personas = {
     cio: { color: { text: 'text-blue-800', bg: 'bg-blue-50', border: 'border-blue-200', hoverBg: 'hover:bg-blue-100', hoverBorder: 'hover:border-blue-400', selectedBg: 'bg-blue-500' }, tags: ['sd-wan', 'cloud', 'internet access', 'lan', 'wan', 'cloud connectivity', 'sase', 'network security', 'cisco', 'cloud management', 'iaas', 'sovereign cloud', 'it services', 'observability'] },
@@ -294,8 +271,7 @@ export default function App() {
   const [currentUrl, setCurrentUrl] = useState('https://www.orange-business.com/be-en/');
   const [hasProactiveMessage, setHasProactiveMessage] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
-
-
+  
   useEffect(() => {
     if (chatOpen && initialKeywords.length === 0) {
         setInitialKeywords(generateInitialKeywords(3));
@@ -345,9 +321,6 @@ export default function App() {
     setActivePersonaKey(null);
     setCurrentView('initial');
     setShowSchedule(false);
-    if (initialKeywords.length === 0) {
-        setInitialKeywords(generateInitialKeywords(3));
-    }
   }
 
   const handleOpenChat = (view = 'initial') => {
@@ -360,9 +333,6 @@ export default function App() {
           setCurrentView('proactive_message');
       } else {
           setCurrentView('initial');
-          if (initialKeywords.length === 0) {
-              setInitialKeywords(generateInitialKeywords(3));
-          }
       }
   }
   const handleCloseChat = () => {
@@ -494,86 +464,105 @@ export default function App() {
 
                 <div className="overflow-y-auto flex-grow">
                   <AnimatePresence mode="wait">
-                    {currentView === 'initial' && selected.length === 0 && (
-                      <motion.div key="initial-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
-                        <div className="flex flex-wrap justify-center gap-2">
-                            {initialKeywords.map(({keyword, persona}, index) => (
-                              <motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium transition-all duration-200 ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>
-                                {T[keyword] || keyword}
-                              </motion.button>
-                            ))}
-                        </div>
-                      </motion.div>
-                    )}
+                    {(() => {
+                        if (currentView === 'initial' && selected.length === 0) {
+                            return (
+                                <motion.div key="initial-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {initialKeywords.map(({keyword, persona}, index) => (
+                                          <motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium transition-all duration-200 ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>
+                                            {T[keyword] || keyword}
+                                          </motion.button>
+                                        ))}
+                                    </div>
+                                    <div className="mt-4 pt-4 border-t border-gray-200">
+                                        <button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-semibold"><LifeBuoy className="text-orange-500"/>FAQ / Aide en ligne</button>
+                                    </div>
+                                </motion.div>
+                            )
+                        }
 
-                    {selected.length > 0 && (
-                      <motion.div key="refinement-view" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: {delay: 0.2} }} exit={{ opacity: 0 }}>
-                        <motion.div layout className="flex flex-wrap gap-2 p-4 border-b border-gray-200 flex-shrink-0 min-h-[44px]">
-                           <AnimatePresence>
-                           {sortedSelected.map(word => (
-                              <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleDeselectKeyword(word)} className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full text-white ${personas[activePersonaKey]?.color.selectedBg || 'bg-gray-500'} hover:bg-red-500 transition-colors shadow-md`} title={`Retirer '${T[word] || word}'`}>
-                                {T[word] || word} <X className="w-3 h-3" />
-                              </motion.button>
-                            ))}
-                            </AnimatePresence>
-                         </motion.div>
-                         <div className="p-4">
-                             { (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
-                             <div className="flex flex-wrap gap-2">
-                                 {availableKeywords.map((word, index) => (
-                                     <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border transition-colors ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg} ${personas[activePersonaKey]?.color.hoverBorder} flex items-center gap-1`}>
-                                         {T[word] || word}
-                                     </motion.button>
-                                 ))}
-                             </div>
-                         </div>
-                      </motion.div>
-                    )}
-                    
-                    {currentView === 'contact' && (
-                        <motion.div key="contact-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5">
-                            <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
-                            <div className="space-y-3">
-                                <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Phone className="text-orange-500"/>{T.ui_contact_by_phone}</button>
-                                <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><MessageSquare className="text-orange-500"/>{T.ui_contact_by_chat}</button>
-                                <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Mail className="text-orange-500"/>{T.ui_contact_by_email}</button>
-                                <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><PhoneForwarded className="text-orange-500"/>{T.ui_contact_callback_now}</button>
-                                <button onClick={() => setShowSchedule(!showSchedule)} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><CalendarClock className="text-orange-500"/>{T.ui_contact_callback_schedule}</button>
-                                <AnimatePresence>
-                                {showSchedule && (
-                                    <motion.form onSubmit={handleScheduleSubmit} initial={{opacity: 0, height: 0}} animate={{opacity:1, height: 'auto'}} exit={{opacity:0, height: 0}} className="pl-6 pt-2 space-y-2">
-                                        <input type="date" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
-                                        <input type="time" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
-                                        <button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors">{T.ui_contact_confirm_callback}</button>
-                                    </motion.form>
-                                )}
-                                </AnimatePresence>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {currentView === 'contact_confirmation' && (
-                        <motion.div key="contact-confirm-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-8 flex flex-col items-center justify-center h-full text-center">
-                            <CheckCircle className="w-16 h-16 text-green-500" />
-                            <p className="mt-4 font-semibold text-lg text-gray-800">{T.ui_contact_request_received}</p>
-                        </motion.div>
-                    )}
-
-                    {currentView === 'proactive_message' && proactiveTriggers[currentUrl] && (
-                        <motion.div key="proactive-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-6 text-center">
-                            <Sparkles className="w-12 h-12 mx-auto text-orange-500" />
-                            <p className="mt-4 font-semibold text-gray-800">{T[proactiveTriggers[currentUrl].messageKey]}</p>
-                            <motion.button onClick={() => setCurrentView('contact')} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="mt-6 w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">{T[proactiveTriggers[currentUrl].ctaKey]}</motion.button>
-                        </motion.div>
-                    )}
-                    
-                    {currentView.startsWith('rfp') && (
-                        <>
-                        {currentView === 'rfp' && <motion.div key="rfp-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-6 text-center"><FileText className="w-12 h-12 mx-auto text-orange-500" /><h2 className="mt-4 font-semibold text-lg">{T.ui_upload_title}</h2><p className="mt-1 text-sm text-gray-600">{T.ui_upload_subtitle}</p><motion.button onClick={() => {}} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="mt-6 w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">{T.ui_upload_cta}</motion.button></motion.div>}
-                        </>
-                    )}
-
-
+                        if(selected.length > 0) {
+                            return (
+                                <motion.div key="refinement-view" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: {delay: 0.2} }} exit={{ opacity: 0 }}>
+                                  <motion.div layout className="flex flex-wrap gap-2 p-4 border-b border-gray-200 flex-shrink-0 min-h-[44px]">
+                                     <AnimatePresence>
+                                     {sortedSelected.map(word => (
+                                        <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleDeselectKeyword(word)} className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full text-white ${personas[activePersonaKey]?.color.selectedBg || 'bg-gray-500'} hover:bg-red-500 transition-colors shadow-md`} title={`Retirer '${T[word] || word}'`}>
+                                          {T[word] || word} <X className="w-3 h-3" />
+                                        </motion.button>
+                                      ))}
+                                      </AnimatePresence>
+                                   </motion.div>
+                                   <div className="p-4">
+                                       { (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
+                                       <div className="flex flex-wrap gap-2">
+                                           {availableKeywords.map((word, index) => (
+                                               <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border transition-colors ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg} ${personas[activePersonaKey]?.color.hoverBorder} flex items-center gap-1`}>
+                                                   {T[word] || word}
+                                               </motion.button>
+                                           ))}
+                                       </div>
+                                   </div>
+                                </motion.div>
+                            )
+                        }
+                        
+                        switch(currentView) {
+                            case 'contact':
+                                return (
+                                    <motion.div key="contact-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5">
+                                        <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
+                                        <div className="space-y-3">
+                                            <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Phone className="text-orange-500"/>{T.ui_contact_by_phone}</button>
+                                            <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><MessageSquare className="text-orange-500"/>{T.ui_contact_by_chat}</button>
+                                            <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Mail className="text-orange-500"/>{T.ui_contact_by_email}</button>
+                                            <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><PhoneForwarded className="text-orange-500"/>{T.ui_contact_callback_now}</button>
+                                            <button onClick={() => setShowSchedule(!showSchedule)} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><CalendarClock className="text-orange-500"/>{T.ui_contact_callback_schedule}</button>
+                                            <AnimatePresence>
+                                            {showSchedule && (
+                                                <motion.form onSubmit={handleScheduleSubmit} initial={{opacity: 0, height: 0}} animate={{opacity:1, height: 'auto'}} exit={{opacity:0, height: 0}} className="pl-6 pt-2 space-y-2">
+                                                    <input type="date" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+                                                    <input type="time" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+                                                    <button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors">{T.ui_contact_confirm_callback}</button>
+                                                </motion.form>
+                                            )}
+                                            </AnimatePresence>
+                                        </div>
+                                    </motion.div>
+                                );
+                            case 'contact_confirmation':
+                                return (
+                                     <motion.div key="contact-confirm-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-8 flex flex-col items-center justify-center h-full text-center">
+                                        <CheckCircle className="w-16 h-16 text-green-500" />
+                                        <p className="mt-4 font-semibold text-lg text-gray-800">{T.ui_contact_request_received}</p>
+                                    </motion.div>
+                                );
+                             case 'proactive_message':
+                                return proactiveTriggers[currentUrl] ? (
+                                    <motion.div key="proactive-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-6 text-center">
+                                        <Sparkles className="w-12 h-12 mx-auto text-orange-500" />
+                                        <p className="mt-4 font-semibold text-gray-800">{T[proactiveTriggers[currentUrl].messageKey]}</p>
+                                        <motion.button onClick={() => setCurrentView('contact')} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="mt-6 w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">{T[proactiveTriggers[currentUrl].ctaKey]}</motion.button>
+                                    </motion.div>
+                                ) : null;
+                            case 'faq':
+                                return (
+                                    <motion.div key="faq-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5 text-center">
+                                         <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
+                                        <h2 className="text-lg font-bold text-gray-800">{T.ui_faq_title}</h2>
+                                        <p className="text-sm text-gray-500 mt-1 mb-4">{T.ui_faq_subtitle}</p>
+                                        <div className="space-y-2 text-left">
+                                            <button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">{T.ui_faq_prompt_1}</button>
+                                            <button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">{T.ui_faq_prompt_2}</button>
+                                            <button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">{T.ui_faq_prompt_3}</button>
+                                        </div>
+                                    </motion.div>
+                                );
+                            default:
+                                return null;
+                        }
+                    })()}
                   </AnimatePresence>
                 </div>
                 
