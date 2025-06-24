@@ -119,6 +119,11 @@ const translations = {
         'ui_faq_prompt_2': 'Quelles sont les options de sécurité pour ma flotte mobile ?',
         'ui_faq_prompt_3': 'Je n\'arrive pas à accéder à mon espace client.',
         'ui_add_to_cart': 'Ajouter au panier',
+        'ui_learn_more': 'En savoir plus',
+        'ui_offer_chat_title': 'Discuter de l\'offre',
+        'ui_agent_welcome': 'Bonjour ! Je m\'appelle Alex. Je vois que l\'offre "{offerName}" vous intéresse. Comment puis-je vous aider ?',
+        'ui_chat_prompt_placeholder': 'Posez votre question à Alex...',
+        'ui_back_to_offers': 'Retour aux offres',
         'ui_cart_title': 'Votre Panier',
         'ui_cart_empty': 'Votre panier est vide.',
         'ui_cart_checkout': 'Passer la commande',
@@ -146,7 +151,7 @@ translations.en.offers = offers.reduce((acc, offer) => {
 
 Object.keys(translations.fr).forEach(key => {
     if(!key.startsWith('ui_') && !translations.en[key] && key !== 'offers') {
-        translations.en[key] = key;
+        translations.en[key] = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
 });
 translations.en.ui_results_for = 'results for';
@@ -178,6 +183,11 @@ translations.en.ui_faq_prompt_1 = 'How do I configure my SD-WAN?';
 translations.en.ui_faq_prompt_2 = 'What are the security options for my mobile fleet?';
 translations.en.ui_faq_prompt_3 = 'I can\'t access my customer portal.';
 translations.en.ui_add_to_cart = 'Add to Cart';
+translations.en.ui_learn_more = 'Learn More';
+translations.en.ui_offer_chat_title = 'Discuss the Offer';
+translations.en.ui_agent_welcome = 'Hello! My name is Alex. I see you\'re interested in the "{offerName}" offer. How can I help you today?';
+translations.en.ui_chat_prompt_placeholder = 'Ask Alex your question...';
+translations.en.ui_back_to_offers = 'Back to offers';
 translations.en.ui_cart_title = 'Your Cart';
 translations.en.ui_cart_empty = 'Your cart is empty.';
 translations.en.ui_cart_checkout = 'Proceed to Checkout';
@@ -301,6 +311,11 @@ export default function App() {
   const cartControls = useAnimation(); // Animation controls for the cart icon
   const prevCartLength = useRef(cart.length); // To detect when cart size changes
 
+  // **NEW**: State for the offer-specific chat
+  const [activeOfferForChat, setActiveOfferForChat] = useState(null);
+  const [offerChatHistory, setOfferChatHistory] = useState([]);
+  const [isAgentTyping, setIsAgentTyping] = useState(false);
+
   // --- EFFECTS ---
   
   // Generate initial keywords when the chat is opened for the first time.
@@ -328,15 +343,15 @@ export default function App() {
     prevCartLength.current = cart.length;
   }, [cart.length, cartControls]);
   
-  // *** FIXED ***: Effect to manage view state transitions, preventing re-render loops.
+  // Effect to manage view state transitions, preventing re-render loops.
   useEffect(() => {
-    // Automatically switch to refinement view when a keyword is selected from the initial view
-    if (selected.length > 0 && currentView === 'initial') {
-      setCurrentView('refinement');
-    } 
-    // Automatically switch back to initial view when all keywords are deselected from the refinement view
-    else if (selected.length === 0 && currentView === 'refinement') {
-      setCurrentView('initial');
+    if (currentView !== 'offer_chat') {
+        if (selected.length > 0 && currentView === 'initial') {
+          setCurrentView('refinement');
+        } 
+        else if (selected.length === 0 && currentView === 'refinement') {
+          setCurrentView('initial');
+        }
     }
   }, [selected, currentView]);
 
@@ -361,7 +376,6 @@ export default function App() {
   const handleSelectKeyword = (word, personaKey) => {
     if (!selected.includes(word)) {
         if (selected.length === 0 && personaKey) {
-            // Set the active persona when the first keyword is selected.
             setActivePersonaKey(personaKey);
         }
         setSelected((prev) => [...prev, word]);
@@ -371,7 +385,6 @@ export default function App() {
   const handleDeselectKeyword = (word) => {
     setSelected((prev) => {
         const newSelected = prev.filter((kw) => kw !== word);
-        // Reset persona if no keywords are selected.
         if (newSelected.length === 0) {
             setActivePersonaKey(null);
         }
@@ -385,6 +398,8 @@ export default function App() {
     setActivePersonaKey(null);
     setCurrentView('initial');
     setShowSchedule(false);
+    setActiveOfferForChat(null);
+    setOfferChatHistory([]);
   }
 
   const handleOpenChat = (view = 'initial') => {
@@ -394,16 +409,13 @@ export default function App() {
       if(view !== 'initial') {
         setCurrentView(view);
       } else if (trigger) {
-        // If there's a proactive trigger for the current URL, show the message.
         setCurrentView('proactive_message');
       } else {
-        // Otherwise, reset to initial or refinement depending on selection
         setCurrentView(selected.length > 0 ? 'refinement' : 'initial');
       }
   }
   const handleCloseChat = () => {
       setChatOpen(false);
-      // Reset the state after the closing animation finishes.
       setTimeout(() => {
           handleReset();
       }, 300);
@@ -418,62 +430,43 @@ export default function App() {
     if (!prompt) return;
     setIsLoading(true);
     
-    // Call the Gemini API to extract keywords from the user's prompt.
     let chatHistory = [{ role: "user", parts: [{ text: `From the user prompt "${prompt}", extract up to 5 relevant keywords from the following list. Return only a JSON object with a "keywords" array: [${Array.from(allKeywordsFromOffers).filter(k => !k.startsWith('tag_')).join(', ')}]` }] }];
     const payload = {
       contents: chatHistory,
       generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "keywords": { "type": "ARRAY", "items": { "type": "STRING" } } } } }
     };
-    const apiKey = "" // API key is handled by the environment, left blank here.
+    const apiKey = "" 
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     try {
         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const result = await response.json();
-        
         let extracted = [];
         const textToParse = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
         if (textToParse) {
-            try {
-                const parsedJson = JSON.parse(textToParse);
-                extracted = parsedJson.keywords || [];
-            } catch (parseError) {
-                console.error("Failed to parse Gemini response JSON:", parseError, "Received text:", textToParse);
-            }
-        } else {
-            console.error("Gemini response is missing text part.");
+            extracted = JSON.parse(textToParse).keywords || [];
         }
-        
         handleReset();
         if(extracted.length > 0) {
-          // Set the extracted keywords as the current selection.
           const firstKw = extracted[0];
           const personaKey = Object.keys(personas).find(p => personas[p].tags.includes(firstKw)) || 'cio';
           setActivePersonaKey(personaKey);
           setSelected(extracted);
         }
-    } catch (error) { 
-        console.error("Error calling Gemini API:", error); 
-    }
+    } catch (error) { console.error("Error with Gemini API or parsing:", error); }
     
     setIsLoading(false);
     e.target.elements.prompt.value = '';
   }
   
-  // Handle contact requests, showing a confirmation message.
   const handleContactRequest = () => {
     setCurrentView('contact_confirmation');
-    setTimeout(() => {
-        handleCloseChat();
-    }, 2500);
+    setTimeout(() => { handleCloseChat(); }, 2500);
   }
   
   const handleRfpAnalysis = () => {
     setCurrentView('rfp_analyzing');
-    setTimeout(() => {
-        setCurrentView('rfp_summary');
-    }, 2500);
+    setTimeout(() => { setCurrentView('rfp_summary'); }, 2500);
   }
 
   const handleScheduleSubmit = (e) => {
@@ -481,33 +474,70 @@ export default function App() {
     handleContactRequest();
   }
 
+  // **NEW**: Handlers for the offer-specific chat
+  const handleStartOfferChat = (offer) => {
+    const offerName = (T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name;
+    const welcomeMessage = {
+      role: 'agent',
+      text: T.ui_agent_welcome.replace('{offerName}', offerName)
+    };
+    setActiveOfferForChat(offer);
+    setOfferChatHistory([welcomeMessage]);
+    setCurrentView('offer_chat');
+  };
+
+  const handleOfferChatSubmit = async (e) => {
+    e.preventDefault();
+    const userMessageText = e.target.elements.prompt.value;
+    if (!userMessageText.trim()) return;
+
+    const newHistory = [...offerChatHistory, { role: 'user', text: userMessageText }];
+    setOfferChatHistory(newHistory);
+    e.target.elements.prompt.value = '';
+    setIsAgentTyping(true);
+
+    const offer = activeOfferForChat;
+    const salesPersonaPrompt = `You are Alex, a world-class salesperson for Orange Business, an expert in B2B technology solutions. You are engaging, empathetic, and extremely knowledgeable. Your goal is to help the customer understand if the selected offer is the perfect fit for their needs.
+    Context: The user is asking about the offer:
+    - Name: "${(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}"
+    - Description: "${(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}"
+    - Associated concepts: "${offer.associated_keywords.join(', ')}"
+    User's question: "${userMessageText}"
+    Your task: Answer in French. Maintain your persona as Alex. Ask clarifying questions to understand their needs. If the offer fits, guide them to the next step (add to cart or contact an expert). If not, suggest finding a better alternative.`;
+    
+    let chatHistory = [{ role: "user", parts: [{ text: salesPersonaPrompt }] }];
+    const payload = { contents: chatHistory };
+    const apiKey = "";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+    try {
+      const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const result = await response.json();
+      const agentResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || "Je ne suis pas sûr de comprendre. Pourriez-vous reformuler ?";
+      setOfferChatHistory(prev => [...prev, { role: 'agent', text: agentResponse }]);
+    } catch (error) {
+      console.error("Error calling Gemini for offer chat:", error);
+      setOfferChatHistory(prev => [...prev, { role: 'agent', text: "Désolé, une erreur s'est produite. Veuillez réessayer." }]);
+    } finally {
+      setIsAgentTyping(false);
+    }
+  };
+
+
   // --- E-COMMERCE HANDLERS ---
   const addToCart = (offer, e) => {
-      // Get positions for the animation
       const cartIconRect = cartRef.current.getBoundingClientRect();
       const offerRect = e.currentTarget.closest('.offer-card').getBoundingClientRect();
       
-      // Trigger the animation
       setFlyingOffer({
         ...offer,
-        id: new Date().getTime(), // Unique key for AnimatePresence
-        source: {
-            x: offerRect.left,
-            y: offerRect.top,
-            width: offerRect.width,
-            height: offerRect.height,
-        },
-        target: {
-            x: cartIconRect.left + cartIconRect.width / 2,
-            y: cartIconRect.top + cartIconRect.height / 2,
-        },
+        id: new Date().getTime(), 
+        source: { x: offerRect.left, y: offerRect.top, width: offerRect.width, height: offerRect.height },
+        target: { x: cartIconRect.left + cartIconRect.width / 2, y: cartIconRect.top + cartIconRect.height / 2 },
       });
 
-      // Update the actual cart state
       setCart(prevCart => {
-        if (prevCart.find(item => item.offer_id === offer.offer_id)) {
-            return prevCart;
-        }
+        if (prevCart.find(item => item.offer_id === offer.offer_id)) return prevCart;
         return [...prevCart, offer];
       });
   };
@@ -526,27 +556,9 @@ export default function App() {
             <motion.div
                 key={flyingOffer.id}
                 className="fixed bg-white border-2 border-orange-400 rounded-lg z-[100] p-3 shadow-2xl overflow-hidden"
-                initial={{ 
-                    x: flyingOffer.source.x, 
-                    y: flyingOffer.source.y,
-                    width: flyingOffer.source.width,
-                    height: flyingOffer.source.height,
-                    opacity: 1,
-                }}
-                animate={{
-                    x: flyingOffer.target.x,
-                    y: flyingOffer.target.y,
-                    width: 0,
-                    height: 0,
-                    scale: 0.2,
-                    opacity: 0.5
-                }}
-                transition={{ 
-                    type: "spring", 
-                    stiffness: 80, 
-                    damping: 15,
-                    mass: 1,
-                }}
+                initial={{ x: flyingOffer.source.x, y: flyingOffer.source.y, width: flyingOffer.source.width, height: flyingOffer.source.height, opacity: 1 }}
+                animate={{ x: flyingOffer.target.x, y: flyingOffer.target.y, width: 0, height: 0, scale: 0.2, opacity: 0.5 }}
+                transition={{ type: "spring", stiffness: 80, damping: 15, mass: 1 }}
                 onAnimationComplete={() => setFlyingOffer(null)}
             />
         )}
@@ -559,7 +571,6 @@ export default function App() {
                     <h1 className="text-3xl font-bold">Page d'Exemple</h1>
                 </div>
                 <div className="flex-1 flex justify-end">
-                     {/* Cart Button */}
                     <motion.button 
                         ref={cartRef} 
                         onClick={() => setIsCartVisible(!isCartVisible)} 
@@ -585,7 +596,6 @@ export default function App() {
             </div>
       </div>
 
-       {/* Cart Panel */}
        <AnimatePresence>
         {isCartVisible && (
             <motion.div
@@ -625,7 +635,6 @@ export default function App() {
         )}
     </AnimatePresence>
 
-      {/* The main chat widget container */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
         <div className="relative flex items-center justify-center w-20 h-20">
             {!chatOpen && (
@@ -655,7 +664,7 @@ export default function App() {
             className={`absolute bottom-24 right-0 max-h-[80vh] bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}
           >
            <LayoutGroup> 
-            <motion.div layout className={`flex flex-1 min-h-0 transition-all duration-500 ease-in-out ${showResultsPanel ? 'w-[48rem]' : 'w-[36rem]'}`}>
+            <motion.div layout className={`flex flex-1 min-h-0 transition-all duration-500 ease-in-out ${showResultsPanel && currentView !== 'offer_chat' ? 'w-[48rem]' : 'w-[36rem]'}`}>
               {/* Main chat panel */}
               <motion.div layout="position" className="flex-1 flex flex-col min-w-[24rem] max-w-lg">
                 <div className="flex justify-between items-center flex-shrink-0 p-4 border-b border-gray-200">
@@ -675,7 +684,6 @@ export default function App() {
                 {/* Main content area, switching between views */}
                 <div className="overflow-y-auto flex-grow">
                   <AnimatePresence mode="wait">
-                    {/* *** REFACTORED ***: Cleaned up render logic to use a switch statement and prevent re-render loops. */}
                     {(() => {
                         switch(currentView) {
                              case 'initial':
@@ -689,7 +697,7 @@ export default function App() {
                                             ))}
                                         </div>
                                         <div className="mt-4 pt-4 border-t border-gray-200">
-                                          <button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-semibold"><LifeBuoy className="text-orange-500"/>FAQ / Aide en ligne</button>
+                                          <button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-semibold"><LifeBuoy className="text-orange-500"/>{T.ui_faq_title}</button>
                                         </div>
                                     </motion.div>
                                 );
@@ -716,6 +724,48 @@ export default function App() {
                                               ))}
                                           </div>
                                       </div>
+                                    </motion.div>
+                                );
+
+                            case 'offer_chat':
+                                return (
+                                    <motion.div key="offer_chat" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="flex flex-col h-full">
+                                        <div className="p-4 border-b border-gray-200 flex-shrink-0">
+                                            <button onClick={() => setCurrentView('refinement')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-2">
+                                                <ArrowLeft size={16}/> {T.ui_back_to_offers}
+                                            </button>
+                                            <h3 className="font-bold text-lg text-center text-orange-600">{(T.offers && T.offers[activeOfferForChat.offer_id]?.name) || activeOfferForChat.offer_name}</h3>
+                                        </div>
+                                        <div className="flex-grow p-4 space-y-4 overflow-y-auto">
+                                          {offerChatHistory.map((msg, index) => (
+                                            <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
+                                              {msg.role === 'agent' && <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0"><Sparkles size={18}/></div>}
+                                              <div className={`max-w-xs md:max-w-md p-3 rounded-2xl ${msg.role === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
+                                                <p className="text-sm">{msg.text}</p>
+                                              </div>
+                                            </div>
+                                          ))}
+                                          {isAgentTyping && (
+                                              <div className="flex items-end gap-2">
+                                                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0"><Sparkles size={18}/></div>
+                                                  <div className="max-w-xs p-3 rounded-2xl bg-gray-200 rounded-bl-none">
+                                                      <div className="flex items-center justify-center gap-1.5">
+                                                          <motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity}} className="w-2 h-2 bg-gray-500 rounded-full"/>
+                                                          <motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.2}} className="w-2 h-2 bg-gray-500 rounded-full"/>
+                                                          <motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.4}} className="w-2 h-2 bg-gray-500 rounded-full"/>
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                          )}
+                                        </div>
+                                         <div className="p-3 mt-auto border-t border-gray-200 bg-white">
+                                          <form onSubmit={handleOfferChatSubmit} className="relative flex items-center">
+                                              <input type="text" name="prompt" disabled={isAgentTyping} placeholder={T.ui_chat_prompt_placeholder} className="w-full pl-4 pr-12 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow disabled:bg-gray-100 text-sm"/>
+                                              <button type="submit" disabled={isAgentTyping} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors">
+                                                  <Send className="w-5 h-5"/>
+                                              </button>
+                                          </form>
+                                        </div>
                                     </motion.div>
                                 );
 
@@ -810,25 +860,26 @@ export default function App() {
                   </AnimatePresence>
                 </div>
                 
-                {/* Prompt input form */}
-                <div className="p-3 mt-auto border-t border-gray-200 bg-white">
-                  <form onSubmit={handlePromptSubmit} className="relative flex items-center">
-                      <input type="text" name="prompt" disabled={isLoading} placeholder={T.ui_prompt_placeholder} className="w-full pl-4 pr-32 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow disabled:bg-gray-100 text-sm"/>
-                      <div className="absolute right-12 flex items-center">
-                        <button type="button" onClick={() => setCurrentView('rfp')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title="Analyser un document"><Paperclip className="w-5 h-5"/></button>
-                        <button type="button" onClick={() => setCurrentView('contact')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title={T.ui_contact_advisor}><Headset className="w-5 h-5"/></button>
-                        <button type="button" className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title="Recherche vocale"><Mic className="w-5 h-5"/></button>
-                      </div>
-                      <button type="submit" disabled={isLoading} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors">
-                          {isLoading ? <motion.div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send className="w-5 h-5"/>}
-                      </button>
-                  </form>
-                </div>
+                { currentView !== 'offer_chat' &&
+                    <div className="p-3 mt-auto border-t border-gray-200 bg-white">
+                      <form onSubmit={handlePromptSubmit} className="relative flex items-center">
+                          <input type="text" name="prompt" disabled={isLoading} placeholder={T.ui_prompt_placeholder} className="w-full pl-4 pr-32 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow disabled:bg-gray-100 text-sm"/>
+                          <div className="absolute right-12 flex items-center">
+                            <button type="button" onClick={() => setCurrentView('rfp')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title="Analyser un document"><Paperclip className="w-5 h-5"/></button>
+                            <button type="button" onClick={() => setCurrentView('contact')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title={T.ui_contact_advisor}><Headset className="w-5 h-5"/></button>
+                            <button type="button" className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title="Recherche vocale"><Mic className="w-5 h-5"/></button>
+                          </div>
+                          <button type="submit" disabled={isLoading} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors">
+                              {isLoading ? <motion.div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send className="w-5 h-5"/>}
+                          </button>
+                      </form>
+                    </div>
+                }
               </motion.div>
 
               {/* Results panel (appears when offers are filtered) */}
               <AnimatePresence>
-              {showResultsPanel && (
+              {showResultsPanel && currentView !== 'offer_chat' && (
                 <motion.div 
                     initial={{ opacity: 0, x: 20 }} 
                     animate={{ opacity: 1, x: 0, transition: { delay: 0.2 } }} 
@@ -847,9 +898,14 @@ export default function App() {
                                     <a href={offer.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-orange-600 hover:underline">{(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}</a>
                                     <p className="text-sm text-gray-700 mt-1">{(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}</p>
                                   </div>
-                                  <button onClick={(e) => addToCart(offer, e)} className="mt-3 w-full bg-orange-100 text-orange-800 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-200 transition-colors text-sm flex items-center justify-center gap-2">
-                                    <PlusCircle size={16} /> {T.ui_add_to_cart}
-                                  </button>
+                                  <div className="flex items-center gap-2 mt-3">
+                                      <button onClick={() => handleStartOfferChat(offer)} className="flex-1 bg-white border border-orange-500 text-orange-600 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-50 transition-colors text-sm flex items-center justify-center gap-2">
+                                        <MessageSquare size={16} /> {T.ui_learn_more}
+                                      </button>
+                                      <button onClick={(e) => addToCart(offer, e)} className="flex-1 bg-orange-100 text-orange-800 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-200 transition-colors text-sm flex items-center justify-center gap-2">
+                                        <PlusCircle size={16} /> {T.ui_add_to_cart}
+                                      </button>
+                                  </div>
                                 </motion.div>
                             ))}
                         </div>
