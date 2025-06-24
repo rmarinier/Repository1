@@ -98,8 +98,8 @@ const translations = {
         'ui_refine_search': 'Affiner votre recherche :', 'ui_prompt_placeholder': 'Décrivez votre besoin...',
         'ui_no_match': 'Aucune offre ne correspond à cette sélection.',
         'ui_upload_title': 'Analyser un document',
-        'ui_upload_subtitle': 'Téléchargez un cahier des charges (RFP) et je vous proposerai une première analyse.',
-        'ui_upload_cta': 'Choisir un fichier', 'ui_upload_analyzing': 'Analyse en cours...',
+        'ui_upload_subtitle': 'Simulez l\'envoi d\'un cahier des charges (RFP) et je vous proposerai une première analyse.',
+        'ui_upload_cta': 'Analyser mon fichier', 'ui_upload_analyzing': 'Analyse en cours...',
         'ui_upload_summary_title': 'Analyse terminée !',
         'ui_upload_summary_desc': 'J\'ai identifié des besoins en Cloud Hybride et Cyberdéfense. Pour vous mettre en relation avec un expert, veuillez compléter ces informations :',
         'ui_upload_submit': 'Contacter un expert', 'ui_upload_success': 'Merci ! Un expert vous contactera bientôt.',
@@ -155,8 +155,8 @@ translations.en.ui_refine_search = 'Refine your search:';
 translations.en.ui_prompt_placeholder = 'Describe your need...';
 translations.en.ui_no_match = 'No offers match this selection.';
 translations.en.ui_upload_title = 'Analyze a document';
-translations.en.ui_upload_subtitle = 'Upload a Request for Proposal (RFP) and I will provide an initial analysis.';
-translations.en.ui_upload_cta = 'Choose a file';
+translations.en.ui_upload_subtitle = 'Simulate uploading a Request for Proposal (RFP) and I will provide an initial analysis.';
+translations.en.ui_upload_cta = 'Analyze my file';
 translations.en.ui_upload_analyzing = 'Analyzing...';
 translations.en.ui_upload_summary_title = 'Analysis complete!';
 translations.en.ui_upload_summary_desc = "I've identified needs in Hybrid Cloud and Cybersecurity. To connect you with an expert, please complete this information:";
@@ -327,6 +327,18 @@ export default function App() {
     }
     prevCartLength.current = cart.length;
   }, [cart.length, cartControls]);
+  
+  // *** FIXED ***: Effect to manage view state transitions, preventing re-render loops.
+  useEffect(() => {
+    // Automatically switch to refinement view when a keyword is selected from the initial view
+    if (selected.length > 0 && currentView === 'initial') {
+      setCurrentView('refinement');
+    } 
+    // Automatically switch back to initial view when all keywords are deselected from the refinement view
+    else if (selected.length === 0 && currentView === 'refinement') {
+      setCurrentView('initial');
+    }
+  }, [selected, currentView]);
 
 
   // --- MEMOIZED VALUES ---
@@ -385,7 +397,8 @@ export default function App() {
         // If there's a proactive trigger for the current URL, show the message.
         setCurrentView('proactive_message');
       } else {
-        setCurrentView('initial');
+        // Otherwise, reset to initial or refinement depending on selection
+        setCurrentView(selected.length > 0 ? 'refinement' : 'initial');
       }
   }
   const handleCloseChat = () => {
@@ -453,6 +466,13 @@ export default function App() {
     setCurrentView('contact_confirmation');
     setTimeout(() => {
         handleCloseChat();
+    }, 2500);
+  }
+  
+  const handleRfpAnalysis = () => {
+    setCurrentView('rfp_analyzing');
+    setTimeout(() => {
+        setCurrentView('rfp_summary');
     }, 2500);
   }
 
@@ -655,58 +675,88 @@ export default function App() {
                 {/* Main content area, switching between views */}
                 <div className="overflow-y-auto flex-grow">
                   <AnimatePresence mode="wait">
+                    {/* *** REFACTORED ***: Cleaned up render logic to use a switch statement and prevent re-render loops. */}
                     {(() => {
-                        // View: Initial state with keyword suggestions
-                        if (currentView === 'initial' && selected.length === 0) {
-                            return (
-                                <motion.div key="initial-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
-                                    <div className="flex flex-wrap justify-center gap-2">
-                                        {initialKeywords.map(({keyword, persona}, index) => (
-                                          <motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium transition-all duration-200 ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>
-                                            {T[keyword] || keyword}
-                                          </motion.button>
-                                        ))}
-                                    </div>
-                                    <div className="mt-4 pt-4 border-t border-gray-200">
-                                      <button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-semibold"><LifeBuoy className="text-orange-500"/>FAQ / Aide en ligne</button>
-                                    </div>
-                                </motion.div>
-                            )
-                        }
-
-                        // View: Keyword refinement after selection
-                        if(selected.length > 0) {
-                            return (
-                                <motion.div key="refinement-view" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: {delay: 0.2} }} exit={{ opacity: 0 }}>
-                                  <motion.div layout className="flex flex-wrap gap-2 p-4 border-b border-gray-200 flex-shrink-0 min-h-[44px]">
-                                     <AnimatePresence>
-                                     {sortedSelected.map(word => (
-                                        <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleDeselectKeyword(word)} className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full text-white ${personas[activePersonaKey]?.color.selectedBg || 'bg-gray-500'} hover:bg-red-500 transition-colors shadow-md`} title={`Retirer '${T[word] || word}'`}>
-                                          {T[word] || word} <X className="w-3 h-3" />
-                                        </motion.button>
-                                     ))}
-                                     </AnimatePresence>
-                                  </motion.div>
-                                  <div className="p-4">
-                                      { (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
-                                      <div className="flex flex-wrap gap-2">
-                                          {availableKeywords.map((word, index) => (
-                                              <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border transition-colors ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg} ${personas[activePersonaKey]?.color.hoverBorder} flex items-center gap-1`}>
-                                                  {T[word] || word}
-                                              </motion.button>
-                                          ))}
-                                      </div>
-                                  </div>
-                                </motion.div>
-                            )
-                        }
-                        
-                        // Other views
                         switch(currentView) {
+                             case 'initial':
+                                return (
+                                    <motion.div key="initial-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
+                                        <div className="flex flex-wrap justify-center gap-2">
+                                            {initialKeywords.map(({keyword, persona}, index) => (
+                                              <motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium transition-all duration-200 ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>
+                                                {T[keyword] || keyword}
+                                              </motion.button>
+                                            ))}
+                                        </div>
+                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                          <button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-semibold"><LifeBuoy className="text-orange-500"/>FAQ / Aide en ligne</button>
+                                        </div>
+                                    </motion.div>
+                                );
+                            
+                            case 'refinement':
+                                return (
+                                    <motion.div key="refinement-view" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: {delay: 0.2} }} exit={{ opacity: 0 }}>
+                                      <motion.div layout className="flex flex-wrap gap-2 p-4 border-b border-gray-200 flex-shrink-0 min-h-[44px]">
+                                         <AnimatePresence>
+                                         {sortedSelected.map(word => (
+                                            <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleDeselectKeyword(word)} className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full text-white ${personas[activePersonaKey]?.color.selectedBg || 'bg-gray-500'} hover:bg-red-500 transition-colors shadow-md`} title={`Retirer '${T[word] || word}'`}>
+                                              {T[word] || word} <X className="w-3 h-3" />
+                                            </motion.button>
+                                         ))}
+                                         </AnimatePresence>
+                                      </motion.div>
+                                      <div className="p-4">
+                                          { (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
+                                          <div className="flex flex-wrap gap-2">
+                                              {availableKeywords.map((word, index) => (
+                                                  <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border transition-colors ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg} ${personas[activePersonaKey]?.color.hoverBorder} flex items-center gap-1`}>
+                                                      {T[word] || word}
+                                                  </motion.button>
+                                              ))}
+                                          </div>
+                                      </div>
+                                    </motion.div>
+                                );
+
+                             case 'rfp':
+                                return (
+                                    <motion.div key="rfp-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5 text-center">
+                                         <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
+                                        <h2 className="text-lg font-bold text-gray-800">{T.ui_upload_title}</h2>
+                                        <p className="text-sm text-gray-500 mt-1 mb-6">{T.ui_upload_subtitle}</p>
+                                        <motion.button onClick={handleRfpAnalysis} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">
+                                           {T.ui_upload_cta}
+                                        </motion.button>
+                                    </motion.div>
+                                );
+                            case 'rfp_analyzing':
+                                return (
+                                    <motion.div key="rfp-analyzing-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-8 flex flex-col items-center justify-center h-full text-center">
+                                       <motion.div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                                       <p className="mt-4 font-semibold text-gray-700">{T.ui_upload_analyzing}</p>
+                                    </motion.div>
+                                );
+                            case 'rfp_summary':
+                                return (
+                                     <motion.div key="rfp-summary-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-5">
+                                        <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
+                                        <div className="text-center">
+                                            <CheckCircle className="w-12 h-12 mx-auto text-green-500" />
+                                            <h2 className="text-lg font-bold text-gray-800 mt-3">{T.ui_upload_summary_title}</h2>
+                                            <p className="text-sm text-gray-600 mt-2 mb-4">{T.ui_upload_summary_desc}</p>
+                                        </div>
+                                        <form onSubmit={handleContactRequest} className="space-y-3">
+                                            <input type="text" placeholder="Nom complet" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+                                            <input type="email" placeholder="Adresse e-mail" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+                                            <button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors">{T.ui_upload_submit}</button>
+                                        </form>
+                                    </motion.div>
+                                );
                             case 'contact':
                                 return (
                                     <motion.div key="contact-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5">
-                                        <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
+                                        <button onClick={() => setCurrentView(selected.length > 0 ? 'refinement' : 'initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
                                         <div className="space-y-3">
                                             <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Phone className="text-orange-500"/>{T.ui_contact_by_phone}</button>
                                             <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><MessageSquare className="text-orange-500"/>{T.ui_contact_by_chat}</button>
