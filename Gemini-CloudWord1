@@ -2,39 +2,48 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { Sparkles, MessageCircle, X, RotateCcw, Send, Mic, Paperclip, FileText, CheckCircle, Search } from 'lucide-react';
 
-// --- DATABASE SIMULATION (Enriched with Telecom core business) ---
+// --- DATABASE SIMULATION (Updated from user's Excel file) ---
 const csvData = `
 "Offer_ID","Offer_Name","Category_Type","Primary_Category_Name","Sub_Category_Name","Description","URL","Associated_Keywords","Partner_Name"
 "O001","Workplace Together [Webex]","Solution","Collaboration and remote working","Workplace Collaboration","Cisco telephony and collaboration tools managed by Orange. Transforms traditional telephony into modern unified communications.","https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex","cisco,webex,telephony,collaboration,remote working,unified communications,hybrid work,managed services,calling,meeting,contact center,tag_efficacite_employes","Cisco"
-"O002","Multisourcing Service Integration (MSI)","Solution","Consulting and digital transformation","IT Service Management","Centrally manage all of your IT services expenses and performance.","https://www.orange-business.com/be-en/solutions/consulting-digital-transformation/multisourcing-service-integration","msi,it services,service management,opex,cost optimization,performance management,tag_optimisation_operationnelle",""
-"O003","Data & AI Architecture Assessment","Solution","Data Intelligence & AI","Data Architecture","Optimizing value creation through a modern and efficient data platform.","https://www.orange-business.com/be-en/solutions/data-ai-architecture-assessment","data architecture,ai,data platform,assessment,value creation,modernization,tag_innovation_data,tag_gestion_donnees",""
-"O004","AI Center of Excellence (CoE)","Solution","Data Intelligence & AI","AI Enablement","Empowering your team with expert guidance to accelerate AI transformation.","https://www.orange-business.com/be-en/solutions/data-intelligence-iot/ai-center-enablement-coe","ai,coe,artificial intelligence,expert guidance,ai transformation,ai strategy,tag_innovation_data",""
-"O005","Cloud MVP","Solution","Data Intelligence & AI","Cloud Data Platform","Future-Proof your Business with a cost-effective Cloud Data Platform.","https://www.orange-business.com/be-en/solutions/cloud-mvp","cloud,mvp,data platform,cost-effective,cloud data,tag_innovation_data,tag_infrastructure_agile",""
-"O006","AI Strategy & Use Case Prioritization","Solution","Data Intelligence & AI","AI Strategy","Unlock the transformative power of AI through strategic prioritization and actionable insights.","https://www.orange-business.com/be-en/solutions/ai-strategy-use-case-prioritization","ai strategy,use case,ai prioritization,transformative ai,actionable insights,tag_innovation_data",""
-"O007","CX Data Accelerator","Solution","Customer Experience","CX Analytics","Unlock additional potential of your CX Data.","https://www.orange-business.com/be-en/solutions/customer-experience/cx-data-accelerator","cx,customer experience,data accelerator,cx data,analytics,tag_experience_client",""
-"O008","CX of the Future Firestarter","Solution","Customer Experience","CX Strategy","Kickstarting your journey towards seamless and unified customer experiences.","https://www.orange-business.com/be-en/solutions/CX-future-firestarter","cx,customer experience,firestarter,unified experience,seamless cx,tag_experience_client",""
-"O009","Customer Data Platform","Solution","Customer Experience","Data Management","Transform customer experiences with data-driven decisions via a unified customer data platform.","https://www.orange-business.com/be-en/solutions/customer-data-platform","cdp,customer data platform,data-driven cx,unified data,tag_experience_client,tag_gestion_donnees",""
-"O010","Contact Center Access","Solution","Customer Experience","Contact Center","Receive calls from anywhere in the world and manage them in real time.","https://www.orange-business.com/be-en/solutions/customer-experience/contact-center-access","contact center,call management,global access,real-time,tag_experience_client",""
-"O011","Asset and Data Management","Solution","Consulting and digital transformation","IT Asset Management","Manage the lifecycle of your assets, support contracts, software and services.","https://www.orange-business.com/be-en/solutions/consulting-digital-transformation/asset-data-management","asset management,data management,it lifecycle,support contracts,software management,tag_optimisation_operationnelle",""
-"O012","Flexible SD-Branch","Solution","Internet and networks","SD-Branch","Manage your corporate network in the cloud with lower costs and seamless security (Cisco Meraki).","https://www.orange-business.com/be-en/solutions/internet-networks/flexible-sd-branch","sd-branch,cisco,meraki,lan,wan,cloud management,network security,tag_infrastructure_agile,sdwan_focus,cisco_sdwan","Cisco"
-"O013","Internet Platinum","Solution","Internet and networks","Internet Access","Dedicated Internet access with 100% guaranteed bandwidth on the Orange network.","https://www.orange-business.com/be-en/solutions/internet-networks/internet-platinum","internet access,dedicated internet,guaranteed bandwidth,platinum internet,tag_infrastructure_agile",""
-"O014","Cloud Infrastructures","Solution","Cloud","IaaS","Gain agility, resilience and performance with the cloud.","https://www.orange-business.com/be-en/solutions/cloud/cloud-infrastructures","cloud infrastructure,iaas,agility,resilience,cloud performance,tag_infrastructure_agile,tag_cloud",""
-"O015","On demand Cloud Connect","Solution","Cloud","Cloud Connectivity","Create and manage your connections to the cloud with complete autonomy.","https://www.orange-business.com/be-en/solutions/cloud/demand-cloud-connect","cloud connect,cloud connectivity,on-demand,autonomous connection,tag_infrastructure_agile,tag_cloud",""
-"O016","Anticipate (Cybersecurity)","Solution","Security","Threat Prevention","Proactive cybersecurity: anticipate and prevent digital threats.","https://www.orange-business.com/be-en/solutions/security/anticipate","cybersecurity,anticipate,threat prevention,proactive security,tag_securite_globale",""
-"O017","Detect and Respond (Cybersecurity)","Solution","Security","Threat Detection","Comprehensive cybersecurity by detecting real-time threats and responding swiftly to minimize damage.","https://www.orange-business.com/be-en/solutions/security/detect-respond","cybersecurity,detect,respond,threat detection,incident response,tag_securite_globale",""
-"O018","Protect (Cybersecurity)","Solution","Security","Data Protection","Comprehensive set of protection solutions to secure endpoints, networks and data.","https://www.orange-business.com/be-en/solutions/security/protect","cybersecurity,protect,data protection,endpoint security,network security,tag_securite_globale",""
-"O019","Flexible SD-WAN (Cisco)","Solution","Internet and networks","SD-WAN","Performance, simplified management, security, and optimized cloud access with Cisco Catalyst SD-WAN.","https://www.orange-business.com/be-en/about-us/partners/cisco","sd-wan,cisco,catalyst,multi-site,network,wan,performance,security,cloud access,tag_infrastructure_agile,sdwan_focus,cisco_sdwan","Cisco"
-"O020","SASE (Secure Access Service Edge)","Expertise","Digital Infrastructure","Network Security","Empower your teams to work together from anywhere with a secure, distributed network that's designed to fit your needs.","https://www.orange-business.com/be-en/expertise/enjoy-scalable-responsive-secure-digital-infrastructure/sase-secure-access-service-edge","sase,secure access service edge,network security,distributed network,remote work,tag_infrastructure_agile,tag_securite_globale",""
-"O021","Unified Engagement Suite - Genesys","Solution","Customer Experience","Contact Center Platform","Augment your customer experience by orchestrating the entire customer journey. Cloud-based, AI-powered.","https://www.orange-business.com/be-en/solutions/customer-experience/unified-engagement-suite-genesys","genesys,contact center,customer journey,omnichannel,ai,cloud,tag_experience_client","Genesys"
-"O022","Unified Engagement Suite - NICE","Solution","Customer Experience","Contact Center Platform","A cloud-based customer-experience platform with seamless omnichannel capabilities, analytics and automation.","https://www.orange-business.com/be-en/solutions/customer-experience/unified-engagement-suite-nice","nice,contact center,customer experience platform,omnichannel,analytics,automation,cloud,tag_experience_client","NICE"
-"E001","Strengthen Data Governance","Expertise","Data & AI","Data Governance","Enable secure and compliant data usage across the organization, ensuring consistency and transparency.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/strengthen-data-governance","data governance,data compliance,data security,data strategy,tag_gestion_donnees",""
-"E002","Build a scalable, accessible data platform","Expertise","Data & AI","Data Platform","Centralize data for easier access, better integration, and faster insights. Construct a cohesive, reliable data platform.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/centralize-data-easier-access-better-integration","data platform,scalable data,accessible data,data integration,faster insights,tag_gestion_donnees",""
-"E003","Define a winning Data Strategy","Expertise","Data & AI","Data Strategy","Establish a clear and actionable data strategy that guides how data is utilized. Optimize the value of AI models.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/define-winning-data-strategy","data strategy,ai models,data-centric,tag_innovation_data,tag_gestion_donnees",""
-"E004","Cultivate a Data-Driven Culture","Expertise","Data & AI","Data Culture","Create an environment where data is recognized as a strategic asset. Foster understanding and valuation of data at every level.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/cultivate-data-driven-culture","data culture,data-driven,strategic asset,data literacy,tag_innovation_data,tag_gestion_donnees",""
-"E005","Activate Insights with GenAI and AI","Expertise","Data & AI","AI Implementation","Move beyond the AI hype with a pragmatic approach. Scale AI deployment to achieve measurable impact.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/activate-insights-genai-ai","genai,ai,artificial intelligence,actionable insights,ai deployment,tag_innovation_data",""
-"O034","Gestion de Flotte Mobile","Solution","Mobility","Mobile Fleet Management","Optimize the management, cost, and security of your entire mobile fleet.","https://www.orange-business.com/be-en/solutions/mobile-fleet-management","gestion de flotte,flotte mobile,mdm,mobile device management,enterprise mobility,sécurité mobile,tag_optimisation_operationnelle,tag_efficacite_employes",""
-"O035","Connectivité 5G pour Entreprises","Solution","Internet and networks","5G Connectivity","Unlock new possibilities with high-speed, low-latency 5G connectivity for your business operations and IoT projects.","https://www.orange-business.com/be-en/solutions/5g-connectivity","5g,connectivité 5g,iot,industrie 4.0,private network,réseau privé,low latency,tag_infrastructure_agile,tag_innovation_data",""
-"O036","Mobile Device Management","Solution","Mobility","Mobile Fleet Management","Secure and manage your employees' smartphones and tablets with our MDM solutions.","https://www.orange-business.com/be-en/solutions/mobile-device-management","mdm,gestion de flotte,sécurité mobile,byod,tag_securite_globale,tag_efficacite_employes",""
+"O002","Multisourcing Service Integration (MSI)","Solution","Consulting and digital transformation","IT Service Management","Centrally manage all of your IT services expenses and performance.","https://www.orange-business.com/be-en/solutions/consulting-digital-transformation/multisourcing-service-integration","msi,it services,service management,opex,cost optimization,performance management,tag_optimisation_operationnelle",
+"O003","Data & AI Architecture Assessment","Solution","Data Intelligence & AI","Data Architecture","Optimizing value creation through a modern and efficient data platform.","https://www.orange-business.com/be-en/solutions/data-ai-architecture-assessment","data architecture,ai,data platform,assessment,value creation,modernization,tag_innovation_data,tag_gestion_donnees",
+"O004","AI Center of Excellence (CoE)","Solution","Data Intelligence & AI","AI Enablement","Empowering your team with expert guidance to accelerate AI transformation.","https://www.orange-business.com/be-en/solutions/data-intelligence-iot/ai-center-enablement-coe","ai,coe,artificial intelligence,expert guidance,ai transformation,ai strategy,tag_innovation_data",
+"O005","Cloud MVP","Solution","Data Intelligence & AI","Cloud Data Platform","Future-Proof your Business with a cost-effective Cloud Data Platform.","https://www.orange-business.com/be-en/solutions/cloud-mvp","cloud,mvp,data platform,cost-effective,cloud data,tag_innovation_data,tag_infrastructure_agile",
+"O006","AI Strategy & Use Case Prioritization","Solution","Data Intelligence & AI","AI Strategy","Unlock the transformative power of AI through strategic prioritization and actionable insights.","https://www.orange-business.com/be-en/solutions/ai-strategy-use-case-prioritization","ai strategy,use case,ai prioritization,transformative ai,actionable insights,tag_innovation_data",
+"O007","CX Data Accelerator","Solution","Customer Experience","CX Analytics","Unlock additional potential of your CX Data.","https://www.orange-business.com/be-en/solutions/customer-experience/cx-data-accelerator","cx,customer experience,data accelerator,cx data,analytics,tag_experience_client",
+"O008","CX of the Future Firestarter","Solution","Customer Experience","CX Strategy","Kickstarting your journey towards seamless and unified customer experiences.","https://www.orange-business.com/be-en/solutions/CX-future-firestarter","cx,customer experience,firestarter,unified experience,seamless cx,tag_experience_client",
+"O009","Customer Data Platform","Solution","Customer Experience","Data Management","Transform customer experiences with data-driven decisions via a unified customer data platform.","https://www.orange-business.com/be-en/solutions/customer-data-platform","cdp,customer data platform,data-driven cx,unified data,tag_experience_client,tag_gestion_donnees",
+"O010","Contact Center Access","Solution","Customer Experience","Contact Center","Receive calls from anywhere in the world and manage them in real time.","https://www.orange-business.com/be-en/solutions/customer-experience/contact-center-access","contact center,call management,global access,real-time,tag_experience_client",
+"O011","Asset and Data Management","Solution","Consulting and digital transformation","IT Asset Management","Manage the lifecycle of your assets, support contracts, software and services.","https://www.orange-business.com/be-en/solutions/consulting-digital-transformation/asset-data-management","asset management,data management,it lifecycle,support contracts,software management,tag_optimisation_operationnelle",
+"O012","Flexible SD-Branch","Solution","Internet and networks","SD-Branch","Manage your corporate network in the cloud with lower costs and seamless security (Cisco Meraki).","https://www.orange-business.com/be-en/solutions/internet-networks/flexible-sd-branch","sd-branch,cisco,meraki,lan,wan,cloud management,network security,tag_infrastructure_agile,sdwan_focus,cisco_sdwan",Cisco
+"O013","Internet Platinum","Solution","Internet and networks","Internet Access","Dedicated Internet access with 100% guaranteed bandwidth on the Orange network.","https://www.orange-business.com/be-en/solutions/internet-networks/internet-platinum","internet access,dedicated internet,guaranteed bandwidth,platinum internet,tag_infrastructure_agile",
+"O014","Cloud Infrastructures","Solution","Cloud","IaaS","Gain agility, resilience and performance with the cloud.","https://www.orange-business.com/be-en/solutions/cloud/cloud-infrastructures","cloud infrastructure,iaas,agility,resilience,cloud performance,tag_infrastructure_agile,tag_cloud",
+"O015","On demand Cloud Connect","Solution","Cloud","Cloud Connectivity","Create and manage your connections to the cloud with complete autonomy.","https://www.orange-business.com/be-en/solutions/cloud/demand-cloud-connect","cloud connect,cloud connectivity,on-demand,autonomous connection,tag_infrastructure_agile,tag_cloud",
+"O016","Anticipate (Cybersecurity)","Solution","Security","Threat Prevention","Proactive cybersecurity: anticipate and prevent digital threats.","https://www.orange-business.com/be-en/solutions/security/anticipate","cybersecurity,anticipate,threat prevention,proactive security,tag_securite_globale",
+"O017","Detect and Respond (Cybersecurity)","Solution","Security","Threat Detection","Comprehensive cybersecurity by detecting real-time threats and responding swiftly to minimize damage.","https://www.orange-business.com/be-en/solutions/security/detect-respond","cybersecurity,detect,respond,threat detection,incident response,tag_securite_globale",
+"O018","Protect (Cybersecurity)","Solution","Security","Data Protection","Comprehensive set of protection solutions to secure endpoints, networks and data.","https://www.orange-business.com/be-en/solutions/security/protect","cybersecurity,protect,data protection,endpoint security,network security,tag_securite_globale",
+"O019","Flexible SD-WAN (Cisco)","Solution","Internet and networks","SD-WAN","Performance, simplified management, security, and optimized cloud access with Cisco Catalyst SD-WAN.","https://www.orange-business.com/be-en/about-us/partners/cisco","sd-wan,cisco,catalyst,multi-site,network,wan,performance,security,cloud access,tag_infrastructure_agile,sdwan_focus,cisco_sdwan",Cisco
+"O020","SASE (Secure Access Service Edge)","Expertise","Digital Infrastructure","Network Security","Empower your teams to work together from anywhere with a secure, distributed network that's designed to fit your needs.","https://www.orange-business.com/be-en/expertise/enjoy-scalable-responsive-secure-digital-infrastructure/sase-secure-access-service-edge","sase,secure access service edge,network security,distributed network,remote work,tag_infrastructure_agile,tag_securite_globale",
+"O021","Unified Engagement Suite - Genesys","Solution","Customer Experience","Contact Center Platform","Augment your customer experience by orchestrating the entire customer journey. Cloud-based, AI-powered.","https://www.orange-business.com/be-en/solutions/customer-experience/unified-engagement-suite-genesys","genesys,contact center,customer journey,omnichannel,ai,cloud,tag_experience_client",Genesys
+"O022","Unified Engagement Suite - NICE","Solution","Customer Experience","Contact Center Platform","A cloud-based customer-experience platform with seamless omnichannel capabilities, analytics and automation.","https://www.orange-business.com/be-en/solutions/customer-experience/unified-engagement-suite-nice","nice,contact center,customer experience platform,omnichannel,analytics,automation,cloud,tag_experience_client",NICE
+"E001","Strengthen Data Governance","Expertise","Data & AI","Data Governance","Enable secure and compliant data usage across the organization, ensuring consistency and transparency.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/strengthen-data-governance","data governance,data compliance,data security,data strategy,tag_gestion_donnees",
+"E002","Build a scalable, accessible data platform","Expertise","Data & AI","Data Platform","Centralize data for easier access, better integration, and faster insights. Construct a cohesive, reliable data platform.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/centralize-data-easier-access-better-integration","data platform,scalable data,accessible data,data integration,faster insights,tag_gestion_donnees",
+"E003","Define a winning Data Strategy","Expertise","Data & AI","Data Strategy","Establish a clear and actionable data strategy that guides how data is utilized. Optimize the value of AI models.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/define-winning-data-strategy","data strategy,ai models,data-centric,tag_innovation_data,tag_gestion_donnees",
+"E004","Cultivate a Data-Driven Culture","Expertise","Data & AI","Data Culture","Create an environment where data is recognized as a strategic asset. Foster understanding and valuation of data at every level.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/cultivate-data-driven-culture","data culture,data-driven,strategic asset,data literacy,tag_innovation_data,tag_gestion_donnees",
+"E005","Activate Insights with GenAI and AI","Expertise","Data & AI","AI Implementation","Move beyond the AI hype with a pragmatic approach. Scale AI deployment to achieve measurable impact.","https://www.orange-business.com/be-en/expertise/unlocking-business-potential-data-ai/activate-insights-genai-ai","genai,ai,artificial intelligence,actionable insights,ai deployment,tag_innovation_data",
+"O034","Gestion de Flotte Mobile","Solution","Mobility","Mobile Fleet Management","Optimize the management, cost, and security of your entire mobile fleet.","https://www.orange-business.com/be-en/solutions/mobile-fleet-management","gestion de flotte,flotte mobile,mdm,mobile device management,enterprise mobility,sécurité mobile,tag_optimisation_operationnelle,tag_efficacite_employes",
+"O035","Connectivité 5G pour Entreprises","Solution","Internet and networks","5G Connectivity","Unlock new possibilities with high-speed, low-latency 5G connectivity for your business operations and IoT projects.","https://www.orange-business.com/be-en/solutions/5g-connectivity","5g,connectivité 5g,iot,industrie 4.0,private network,réseau privé,low latency,tag_infrastructure_agile,tag_innovation_data",
+"O036","Mobile Device Management","Solution","Mobility","Mobile Fleet Management","Secure and manage your employees' smartphones and tablets with our MDM solutions.","https://www.orange-business.com/be-en/solutions/mobile-device-management","mdm,gestion de flotte,sécurité mobile,byod,tag_securite_globale,tag_efficacite_employes",
+"O037","Private 5G Network","Solution","Internet and networks","5G Connectivity","Deploy a dedicated, private 5G network for your industrial campus or critical operations.","https://www.orange-business.com/be-en/solutions/private-5g-network","5g,private network,réseau privé,industrial network,industrie 4.0,campus network,tag_infrastructure_agile",
+"O038","IoT Connect","Solution","IoT","Connectivity","Connect your IoT devices seamlessly with our global, managed IoT connectivity platform.","https://www.orange-business.com/be-en/solutions/iot-connect","iot,connectivity,managed iot,global iot,sim,esim,tag_infrastructure_agile",
+"O039","IoT Device Management","Solution","IoT","Device Management","Manage the lifecycle of your IoT devices, from deployment to retirement, on a single platform.","https://www.orange-business.com/be-en/solutions/iot-device-management","iot,device management,lifecycle management,tag_optimisation_operationnelle",
+"O040","Observability with ThousandEyes","Solution","Internet and networks","Network Monitoring","Gain end-to-end visibility into your network and application performance with Cisco ThousandEyes.","https://www.orange-business.com/be-en/about-us/partners/cisco","network monitoring,application performance,cisco,thousandeyes,observability,saas,tag_infrastructure_agile",Cisco
+"O041","Cloud Public - Flexible Engine","Solution","Cloud","IaaS","A reliable and secure Public Cloud platform based on OpenStack, hosted in Europe.","https://www.orange-business.com/be-en/solutions/cloud/flexible-engine","cloud,public cloud,iaas,openstack,sovereign cloud,flexible engine,tag_cloud,tag_infrastructure_agile",
+"O042","Managed Public Cloud Services","Solution","Cloud","Managed Services","Let our experts manage your public cloud environments (AWS, Azure, Google Cloud) to optimize costs and security.","https://www.orange-business.com/be-en/solutions/managed-public-cloud-services","managed cloud,aws,azure,google cloud,cloud management,cost optimization,cloud security,tag_cloud",
+"O043","Enterprise Mobility Management","Solution","Mobility","Mobile Fleet Management","A comprehensive solution to manage and secure your mobile assets and applications (EMM).","https://www.orange-business.com/be-en/solutions/enterprise-mobility-management","emm,enterprise mobility,mdm,mam,mobile security,gestion de flotte,tag_efficacite_employes,tag_securite_globale",
+"O044","Voix sur IP","Solution","Collaboration and remote working","Telephony","Modernize your business telephony with our flexible and scalable Voice over IP solutions.","https://www.orange-business.com/be-en/solutions/voice-over-ip","voip,toip,telephony,business phone,cloud telephony,ipbx,tag_efficacite_employes",
+"O045","Cyber-résilience","Expertise","Security","Consulting","Build a comprehensive strategy to anticipate, protect, detect, and respond to cyber threats, ensuring business continuity.","https://www.orange-business.com/be-en/expertise/cyber-resilience","cyber resilience,business continuity,disaster recovery,incident response,tag_securite_globale",
 `;
 
 function parseCsv(csv) {
@@ -75,74 +84,49 @@ const offers = parseCsv(csvData);
 
 const translations = {
     fr: {
-        'tag_efficacite_employes': 'Améliorer l\'efficacité', 'tag_optimisation_operationnelle': 'Optimiser les opérations',
-        'tag_innovation_data': 'Innover avec la Data & l\'IA', 'tag_gestion_donnees': 'Maîtriser les données',
-        'tag_experience_client': 'Transformer l\'expérience client', 'tag_infrastructure_agile': 'Bâtir une infrastructure agile',
-        'tag_cloud': 'Accélérer la transition Cloud', 'tag_securite_globale': 'Assurer une sécurité globale',
-        'tag_transformation_digitale': 'Réussir la transformation', 'sd-wan': 'SD-WAN', 'lan': 'LAN', 'wan': 'WAN',
-        'cybersecurity': 'Cybersécurité', 'sase': 'SASE', 'threat detection': 'Détection de menaces',
-        'data protection': 'Protection des données', 'genai': 'IA Générative', 'data platform': 'Plateforme Data',
-        'analytics': 'Analytics', 'collaboration': 'Collaboration', 'cloud': 'Cloud', 'cisco': 'Cisco',
-        'contact center': 'Contact Center', 'it services': 'Services IT', 'data architecture': 'Architecture Data',
-        'internet access': 'Accès Internet', 'cloud networking': 'Réseau Cloud', 'ai': 'Intelligence Artificielle',
-        'gestion de flotte': 'Gestion de Flotte', '5g': '5G', 'mdm': 'MDM',
+        'sd-wan': 'SD-WAN', 'lan': 'LAN', 'wan': 'WAN', 'cybersecurity': 'Cybersécurité', 'sase': 'SASE', 
+        'genai': 'IA Générative', 'cloud': 'Cloud', 'contact center': 'Contact Center',
+        'internet access': 'Accès Internet', 'ai': 'Intelligence Artificielle',
+        'gestion de flotte': 'Gestion de Flotte', '5g': '5G', 'mdm': 'MDM', 'iot': 'IoT', 'telephony': 'Téléphonie',
+        'collaboration': 'Collaboration', 'data platform': 'Plateforme Data', 'cdp': 'CDP', 'analytics': 'Analytics', 'network security': 'Sécurité Réseau', 'voip': 'Voix sur IP',
+        
         'ui_results_for': 'résultats pour', 'ui_result_for': 'résultat pour',
         'ui_refine_search': 'Affiner votre recherche :', 'ui_prompt_placeholder': 'Décrivez votre besoin...',
         'ui_no_match': 'Aucune offre ne correspond à cette sélection.',
-        'ui_initial_prompt': 'Comment puis-je vous aider ?',
         'ui_upload_title': 'Analyser un document',
         'ui_upload_subtitle': 'Téléchargez un cahier des charges (RFP) et je vous proposerai une première analyse.',
-        'ui_upload_cta': 'Choisir un fichier',
-        'ui_upload_analyzing': 'Analyse en cours...',
+        'ui_upload_cta': 'Choisir un fichier', 'ui_upload_analyzing': 'Analyse en cours...',
         'ui_upload_summary_title': 'Analyse terminée !',
         'ui_upload_summary_desc': 'J\'ai identifié des besoins en Cloud Hybride et Cyberdéfense. Pour vous mettre en relation avec un expert, veuillez compléter ces informations :',
-        'ui_upload_submit': 'Contacter un expert',
-        'ui_upload_success': 'Merci ! Un expert vous contactera bientôt.',
+        'ui_upload_submit': 'Contacter un expert', 'ui_upload_success': 'Merci ! Un expert vous contactera bientôt.',
     },
     en: {
-        'tag_efficacite_employes': 'Improve efficiency', 'tag_optimisation_operationnelle': 'Optimize operations',
-        'tag_innovation_data': 'Innovate with Data & AI', 'tag_gestion_donnees': 'Master & govern data',
-        'tag_experience_client': 'Transform customer experience', 'tag_infrastructure_agile': 'Build agile infrastructure',
-        'tag_cloud': 'Accelerate Cloud transition', 'tag_securite_globale': 'Ensure global security',
-        'tag_transformation_digitale': 'Succeed in digital transformation', 'sd-wan': 'SD-WAN', 'lan': 'LAN', 'wan': 'WAN',
-        'cybersecurity': 'Cybersecurity', 'sase': 'SASE', 'threat detection': 'Threat Detection',
-        'data protection': 'Data Protection', 'genai': 'Generative AI', 'data platform': 'Data Platform',
-        'analytics': 'Analytics', 'collaboration': 'Collaboration', 'cloud': 'Cloud', 'cisco': 'Cisco',
-        'contact center': 'Contact Center', 'it services': 'IT Services', 'data architecture': 'Data Architecture',
-        'internet access': 'Internet Access', 'cloud networking': 'Cloud Networking', 'ai': 'Artificial Intelligence',
-        'gestion de flotte': 'Fleet Management', '5g': '5G', 'mdm': 'MDM',
+        'sd-wan': 'SD-WAN', 'lan': 'LAN', 'wan': 'WAN', 'cybersecurity': 'Cybersecurity', 'sase': 'SASE', 
+        'genai': 'Generative AI', 'cloud': 'Cloud', 'contact center': 'Contact Center',
+        'internet access': 'Internet Access', 'ai': 'Artificial Intelligence',
+        'gestion de flotte': 'Fleet Management', '5g': '5G', 'mdm': 'MDM', 'iot': 'IoT', 'telephony': 'Telephony',
+        'collaboration': 'Collaboration', 'data platform': 'Data Platform', 'cdp': 'CDP', 'analytics': 'Analytics', 'network security': 'Network Security', 'voip': 'Voice over IP',
+
         'ui_results_for': 'results for', 'ui_result_for': 'result for',
         'ui_refine_search': 'Refine your search:', 'ui_prompt_placeholder': 'Describe your need...',
         'ui_no_match': 'No offers match this selection.',
-        'ui_initial_prompt': 'How can I help you?',
         'ui_upload_title': 'Analyze a document',
         'ui_upload_subtitle': 'Upload a Request for Proposal (RFP) and I will provide an initial analysis.',
-        'ui_upload_cta': 'Choose a file',
-        'ui_upload_analyzing': 'Analyzing...',
+        'ui_upload_cta': 'Choose a file', 'ui_upload_analyzing': 'Analyzing...',
         'ui_upload_summary_title': 'Analysis complete!',
         'ui_upload_summary_desc': 'I\'ve identified needs in Hybrid Cloud and Cybersecurity. To connect you with an expert, please complete this information:',
-        'ui_upload_submit': 'Contact an expert',
-        'ui_upload_success': 'Thank you! An expert will contact you shortly.',
+        'ui_upload_submit': 'Contact an expert', 'ui_upload_success': 'Thank you! An expert will contact you shortly.',
     }
 };
 
 const personas = {
-    business: {
-        color: { text: 'text-orange-800', bg: 'bg-orange-50', border: 'border-orange-200', hoverBg: 'hover:bg-orange-100', hoverBorder: 'hover:border-orange-400', selectedBg: 'bg-orange-500' },
-        tags: ['tag_experience_client', 'tag_efficacite_employes', 'tag_optimisation_operationnelle', 'tag_transformation_digitale']
-    },
-    it: {
-        color: { text: 'text-blue-800', bg: 'bg-blue-50', border: 'border-blue-200', hoverBg: 'hover:bg-blue-100', hoverBorder: 'hover:border-blue-400', selectedBg: 'bg-blue-500' },
-        tags: ['tag_infrastructure_agile', 'tag_cloud', 'sd-wan', 'internet access', 'cloud networking', 'lan', 'wan', 'cisco_sdwan', 'gestion de flotte', 'mdm', '5g']
-    },
-    security: {
-        color: { text: 'text-purple-800', bg: 'bg-purple-50', border: 'border-purple-200', hoverBg: 'hover:bg-purple-100', hoverBorder: 'hover:border-purple-400', selectedBg: 'bg-purple-500' },
-        tags: ['tag_securite_globale', 'sase', 'cybersecurity', 'sécurité mobile']
-    },
-    data: {
-        color: { text: 'text-amber-800', bg: 'bg-amber-50', border: 'border-amber-200', hoverBg: 'hover:bg-amber-100', hoverBorder: 'hover:border-amber-400', selectedBg: 'bg-amber-500' },
-        tags: ['tag_innovation_data', 'tag_gestion_donnees', 'genai', 'ai']
-    }
+    cio: { color: { text: 'text-blue-800', bg: 'bg-blue-50', border: 'border-blue-200', hoverBg: 'hover:bg-blue-100', hoverBorder: 'hover:border-blue-400', selectedBg: 'bg-blue-500' }, tags: ['sd-wan', 'cloud', 'internet access', 'lan', 'wan', 'cloud connectivity', 'sase', 'network security', 'cisco', 'cloud management', 'iaas', 'sovereign cloud', 'it services', 'observability'] },
+    ciso: { color: { text: 'text-purple-800', bg: 'bg-purple-50', border: 'border-purple-200', hoverBg: 'hover:bg-purple-100', hoverBorder: 'hover:border-purple-400', selectedBg: 'bg-purple-500' }, tags: ['cybersecurity', 'sase', 'sécurité mobile', 'threat detection', 'data protection', 'network security', 'incident response', 'cyber resilience', 'endpoint security'] },
+    telecom_manager: { color: { text: 'text-lime-800', bg: 'bg-lime-50', border: 'border-lime-200', hoverBg: 'hover:bg-lime-100', hoverBorder: 'hover:border-lime-400', selectedBg: 'bg-lime-500' }, tags: ['gestion de flotte', 'mdm', '5g', 'telephony', 'lan', 'wan', 'voip', 'toip', 'mobile device management', 'emm', 'calling', 'esim'] },
+    coo: { color: { text: 'text-teal-800', bg: 'bg-teal-50', border: 'border-teal-200', hoverBg: 'hover:bg-teal-100', hoverBorder: 'hover:border-teal-400', selectedBg: 'bg-teal-500' }, tags: ['iot', 'gestion de flotte', '5g', 'mdm', 'industrie 4.0', 'lan', 'private network', 'device management', 'asset management'] },
+    cx_leader: { color: { text: 'text-orange-800', bg: 'bg-orange-50', border: 'border-orange-200', hoverBg: 'hover:bg-orange-100', hoverBorder: 'hover:border-orange-400', selectedBg: 'bg-orange-500' }, tags: ['contact center', 'cdp', 'analytics', 'customer journey', 'omnichannel', 'calling', 'genesys', 'nice'] },
+    pme_owner: { color: { text: 'text-green-800', bg: 'bg-green-50', border: 'border-green-200', hoverBg: 'hover:bg-green-100', hoverBorder: 'hover:border-green-400', selectedBg: 'bg-green-500' }, tags: ['internet access', 'telephony', 'collaboration', 'sd-branch', 'webex', 'cloud', 'voip'] },
+    data_leader: { color: { text: 'text-amber-800', bg: 'bg-amber-50', border: 'border-amber-200', hoverBg: 'hover:bg-amber-100', hoverBorder: 'hover:border-amber-400', selectedBg: 'bg-amber-500' }, tags: ['ai', 'genai', 'data platform', 'data architecture', 'analytics', 'data governance', 'data-driven cx'] }
 };
 
 
@@ -151,42 +135,42 @@ const allKeywordsFromOffers = new Set(offers.flatMap(o => o.associated_keywords)
 function generateInitialKeywords(minOccurrences = 3) {
     const keywordOfferCount = {};
     allKeywordsFromOffers.forEach(kw => {
+        if (kw.startsWith('tag_')) return;
         keywordOfferCount[kw] = offers.filter(offer => offer.associated_keywords.includes(kw)).length;
     });
 
-    const eligibleKeywords = Array.from(allKeywordsFromOffers).filter(kw => keywordOfferCount[kw] >= minOccurrences);
+    const eligibleKeywords = Object.keys(keywordOfferCount).filter(kw => keywordOfferCount[kw] >= minOccurrences);
     
-    const mustHaveKeywords = ['sd-wan', 'gestion de flotte', 'cybersecurity', '5g', 'internet access'];
-    const selectedKeywords = new Map();
+    const finalKeywords = new Map();
 
-    mustHaveKeywords.forEach(kw => {
-        if(eligibleKeywords.includes(kw)) {
-            const personaKey = Object.keys(personas).find(p => personas[p].tags.includes(kw)) || 'it';
-            selectedKeywords.set(kw, { keyword: kw, persona: personaKey });
-        }
-    });
+    const personaOrder = ['cio', 'telecom_manager', 'ciso', 'coo', 'cx_leader', 'data_leader', 'pme_owner']; 
+    
+    const keywordsPerPersona = 5;
 
-    const personaOrder = ['it', 'business', 'security', 'data']; 
     for (const personaKey of personaOrder) {
-        if (selectedKeywords.size >= 8) break;
         const personaTags = personas[personaKey].tags;
-        const potentialKeywords = eligibleKeywords.filter(kw => personaTags.includes(kw) && !selectedKeywords.has(kw));
         
-        potentialKeywords.slice(0, 2).forEach(kw => {
-            if (selectedKeywords.size < 8 && !selectedKeywords.has(kw)) {
-                selectedKeywords.set(kw, { keyword: kw, persona: personaKey });
+        const personaEligibleKeywords = eligibleKeywords
+            .filter(kw => personaTags.includes(kw))
+            .sort((a, b) => keywordOfferCount[b] - keywordOfferCount[a]);
+        
+        let count = 0;
+        for (const kw of personaEligibleKeywords) {
+            if (count >= keywordsPerPersona) break;
+            if (!finalKeywords.has(kw)) {
+                finalKeywords.set(kw, { keyword: kw, persona: personaKey });
+                count++;
             }
-        });
+        }
     }
 
-    const finalKeywords = Array.from(selectedKeywords.values());
-
-    for (let i = finalKeywords.length - 1; i > 0; i--) {
+    const shuffledKeywords = Array.from(finalKeywords.values());
+    for (let i = shuffledKeywords.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [finalKeywords[i], finalKeywords[j]] = [finalKeywords[j], finalKeywords[i]];
+        [shuffledKeywords[i], shuffledKeywords[j]] = [shuffledKeywords[j], shuffledKeywords[i]];
     }
     
-    return finalKeywords;
+    return shuffledKeywords;
 }
 
 
@@ -228,9 +212,9 @@ export default function App() {
   const [currentView, setCurrentView] = useState('initial'); 
 
   useEffect(() => {
-      if(chatOpen && initialKeywords.length === 0) {
-          setInitialKeywords(generateInitialKeywords(2)); // Lowered to 2 for more results in demo
-      }
+    if (chatOpen && initialKeywords.length === 0) {
+        setInitialKeywords(generateInitialKeywords(3));
+    }
   }, [chatOpen, initialKeywords]);
 
   const T = translations[language] || translations.en;
@@ -246,13 +230,10 @@ export default function App() {
         if (selected.length === 0 && personaKey) {
             setActivePersonaKey(personaKey);
         }
-        setSelected((prev) => {
-            const newSelection = [...prev, word];
-            return newSelection;
-        });
+        setSelected((prev) => [...prev, word]);
     }
   };
-
+  
   const sortedSelected = useMemo(() => {
     return [...selected].sort((a, b) => (T[a] || a).localeCompare(T[b] || b, language));
   }, [selected, language, T]);
@@ -272,19 +253,16 @@ export default function App() {
     setSelected([]);
     setActivePersonaKey(null);
     setCurrentView('initial');
-    setInitialKeywords(generateInitialKeywords(2));
+    setInitialKeywords(generateInitialKeywords(3));
   }
 
   const handleOpenChat = () => {
-    setChatOpen(true);
-    if (initialKeywords.length === 0) {
-        setInitialKeywords(generateInitialKeywords(2));
-    }
+      setChatOpen(true);
+      if(initialKeywords.length === 0){
+          setInitialKeywords(generateInitialKeywords(3));
+      }
   }
-
-  const handleCloseChat = () => {
-    setChatOpen(false);
-  }
+  const handleCloseChat = () => setChatOpen(false);
 
   const allLanguages = ["fr", "en"]; 
 
@@ -307,7 +285,6 @@ export default function App() {
         const result = await response.json();
         
         let extracted = [];
-        // **FIX**: Added robust check for API response before parsing JSON.
         const textToParse = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
         if (textToParse) {
@@ -320,14 +297,11 @@ export default function App() {
         } else {
             console.error("Gemini response is missing text part.");
         }
-
-        setSelected([]);
-        setActivePersonaKey(null);
-        setCurrentView('initial');
-
+        
+        handleReset();
         if(extracted.length > 0) {
           const firstKw = extracted[0];
-          const personaKey = Object.keys(personas).find(p => offers.some(o => o.associated_keywords.includes(firstKw) && personas[p].tags.some(tag => o.associated_keywords.includes(tag)))) || 'it';
+          const personaKey = Object.keys(personas).find(p => personas[p].tags.includes(firstKw)) || 'cio';
           setActivePersonaKey(personaKey);
           setSelected(extracted);
         }
@@ -379,7 +353,7 @@ export default function App() {
             className={`absolute bottom-24 right-0 max-h-[80vh] bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}
           >
            <LayoutGroup> 
-            <motion.div layout className={`flex transition-all duration-500 ease-in-out ${showResultsPanel ? 'w-[48rem]' : 'w-[36rem]'}`}>
+            <motion.div layout className={`flex flex-1 min-h-0 transition-all duration-500 ease-in-out ${showResultsPanel ? 'w-[48rem]' : 'w-[36rem]'}`}>
               <motion.div layout="position" className="flex-1 flex flex-col min-w-[24rem] max-w-lg">
                 <div className="flex justify-between items-center flex-shrink-0 p-4 border-b border-gray-200">
                   <div className="flex gap-2">
@@ -399,10 +373,9 @@ export default function App() {
                   <AnimatePresence mode="wait">
                     {currentView === 'initial' && selected.length === 0 && (
                       <motion.div key="initial-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
-                        <h2 className="text-center font-semibold text-lg text-gray-800 mb-4">{T.ui_initial_prompt}</h2>
-                        <div className="flex flex-wrap justify-center gap-3">
+                        <div className="flex flex-wrap justify-center gap-2">
                             {initialKeywords.map(({keyword, persona}, index) => (
-                              <motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-4 py-2 rounded-full border-2 font-medium transition-all duration-200 ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>
+                              <motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium transition-all duration-200 ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>
                                 {T[keyword] || keyword}
                               </motion.button>
                             ))}
@@ -422,7 +395,7 @@ export default function App() {
                             </AnimatePresence>
                          </motion.div>
                          <div className="p-4">
-                             { (filteredOffers.length > 1 && availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
+                             { (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
                              <div className="flex flex-wrap gap-2">
                                  {availableKeywords.map((word, index) => (
                                      <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border transition-colors ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg} ${personas[activePersonaKey]?.color.hoverBorder} flex items-center gap-1`}>
@@ -463,25 +436,32 @@ export default function App() {
 
               <AnimatePresence>
               {showResultsPanel && (
-                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0, transition: { delay: 0.2 } }} exit={{ opacity: 0, x: 20, transition: {duration: 0.2} }} className="flex-1 min-w-[22rem] p-4 overflow-y-auto border-l border-gray-200 bg-gray-50/50">
-                  {filteredOffers.length > 0 ? (
-                    <div className="space-y-4">
-                      <p className="text-sm font-medium text-gray-600">
-                        {filteredOffers.length} {filteredOffers.length > 1 ? T.ui_results_for : T.ui_result_for}
-                      </p>
-                        {filteredOffers.map((offer, index) => (
-                            <motion.a key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }} href={offer.url} target="_blank" rel="noopener noreferrer" className="block border border-gray-200 p-3 rounded-lg hover:bg-white hover:shadow-lg hover:border-orange-300 transition-all duration-200">
-                              <p className={`font-semibold text-orange-600 underline`}>{offer.offer_name[language] || offer.offer_name.en}</p>
-                              <p className="text-sm text-gray-700 mt-1">{offer.description[language] || offer.description.en}</p>
-                            </motion.a>
-                        ))}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
-                        <Search className="w-12 h-12 mb-4 text-gray-400" />
-                        <p className="font-semibold">{T.ui_no_match}</p>
-                    </div>
-                  )}
+                <motion.div 
+                    initial={{ opacity: 0, x: 20 }} 
+                    animate={{ opacity: 1, x: 0, transition: { delay: 0.2 } }} 
+                    exit={{ opacity: 0, x: 20, transition: {duration: 0.2} }} 
+                    className="flex-1 min-w-[22rem] flex flex-col border-l border-gray-200 bg-gray-50/50"
+                >
+                  <div className="overflow-y-auto p-4 flex-grow">
+                      {filteredOffers.length > 0 ? (
+                        <div className="space-y-4">
+                          <p className="text-sm font-medium text-gray-600">
+                            {filteredOffers.length} {filteredOffers.length > 1 ? T.ui_results_for : T.ui_result_for}
+                          </p>
+                            {filteredOffers.map((offer, index) => (
+                                <motion.a key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }} href={offer.url} target="_blank" rel="noopener noreferrer" className="block border border-gray-200 p-3 rounded-lg hover:bg-white hover:shadow-lg hover:border-orange-300 transition-all duration-200">
+                                  <p className={`font-semibold text-orange-600 underline`}>{offer.offer_name[language] || offer.offer_name.en}</p>
+                                  <p className="text-sm text-gray-700 mt-1">{offer.description[language] || offer.description.en}</p>
+                                </motion.a>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
+                            <Search className="w-12 h-12 mb-4 text-gray-400" />
+                            <p className="font-semibold">{T.ui_no_match}</p>
+                        </div>
+                      )}
+                  </div>
                 </motion.div>
               )}
               </AnimatePresence>
