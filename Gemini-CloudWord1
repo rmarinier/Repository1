@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup, useAnimation } from 'framer-motion';
 import { Sparkles, X, RotateCcw, Send, Mic, Paperclip, CheckCircle, Search, Headset, Phone, MessageSquare, Mail, PhoneForwarded, CalendarClock, ArrowLeft, LifeBuoy, ShoppingCart, PlusCircle, Trash2 } from 'lucide-react';
 
 // --- DATABASE SIMULATION (Updated from user's Excel file) ---
@@ -296,6 +296,10 @@ export default function App() {
   // E-commerce state
   const [cart, setCart] = useState([]);
   const [isCartVisible, setIsCartVisible] = useState(false);
+  const [flyingOffer, setFlyingOffer] = useState(null); // For "fly to cart" animation
+  const cartRef = useRef(null); // Ref for the cart icon
+  const cartControls = useAnimation(); // Animation controls for the cart icon
+  const prevCartLength = useRef(cart.length); // To detect when cart size changes
 
   // --- EFFECTS ---
   
@@ -311,6 +315,18 @@ export default function App() {
     const trigger = proactiveTriggers[currentUrl];
     setHasProactiveMessage(!!trigger);
   }, [currentUrl]);
+  
+  // Animate cart icon on item addition
+  useEffect(() => {
+    if (cart.length > prevCartLength.current) {
+        cartControls.start({
+            scale: [1, 1.3, 1],
+            rotate: [0, -10, 10, -10, 0],
+            transition: { duration: 0.5, ease: "easeInOut" }
+        });
+    }
+    prevCartLength.current = cart.length;
+  }, [cart.length, cartControls]);
 
 
   // --- MEMOIZED VALUES ---
@@ -446,14 +462,34 @@ export default function App() {
   }
 
   // --- E-COMMERCE HANDLERS ---
-  const addToCart = (offer) => {
-    setCart(prevCart => {
-        // Prevent adding duplicates
+  const addToCart = (offer, e) => {
+      // Get positions for the animation
+      const cartIconRect = cartRef.current.getBoundingClientRect();
+      const offerRect = e.currentTarget.closest('.offer-card').getBoundingClientRect();
+      
+      // Trigger the animation
+      setFlyingOffer({
+        ...offer,
+        id: new Date().getTime(), // Unique key for AnimatePresence
+        source: {
+            x: offerRect.left,
+            y: offerRect.top,
+            width: offerRect.width,
+            height: offerRect.height,
+        },
+        target: {
+            x: cartIconRect.left + cartIconRect.width / 2,
+            y: cartIconRect.top + cartIconRect.height / 2,
+        },
+      });
+
+      // Update the actual cart state
+      setCart(prevCart => {
         if (prevCart.find(item => item.offer_id === offer.offer_id)) {
             return prevCart;
         }
         return [...prevCart, offer];
-    });
+      });
   };
 
   const removeFromCart = (offerId) => {
@@ -465,6 +501,37 @@ export default function App() {
   // --- RENDER ---
   return (
     <div className="relative min-h-screen bg-gray-100 text-gray-900 p-8 flex flex-col items-center font-sans">
+       <AnimatePresence>
+        {flyingOffer && (
+            <motion.div
+                key={flyingOffer.id}
+                className="fixed bg-white border-2 border-orange-400 rounded-lg z-[100] p-3 shadow-2xl overflow-hidden"
+                initial={{ 
+                    x: flyingOffer.source.x, 
+                    y: flyingOffer.source.y,
+                    width: flyingOffer.source.width,
+                    height: flyingOffer.source.height,
+                    opacity: 1,
+                }}
+                animate={{
+                    x: flyingOffer.target.x,
+                    y: flyingOffer.target.y,
+                    width: 0,
+                    height: 0,
+                    scale: 0.2,
+                    opacity: 0.5
+                }}
+                transition={{ 
+                    type: "spring", 
+                    stiffness: 80, 
+                    damping: 15,
+                    mass: 1,
+                }}
+                onAnimationComplete={() => setFlyingOffer(null)}
+            />
+        )}
+      </AnimatePresence>
+
       <div className="w-full max-w-5xl">
             <header className="relative w-full flex justify-between items-center mb-4">
                 <div className="flex-1"></div> {/* Spacer */}
@@ -473,14 +540,20 @@ export default function App() {
                 </div>
                 <div className="flex-1 flex justify-end">
                      {/* Cart Button */}
-                    <button onClick={() => setIsCartVisible(!isCartVisible)} className="relative p-2 text-gray-600 hover:text-orange-500 transition-colors" aria-label="Voir le panier">
+                    <motion.button 
+                        ref={cartRef} 
+                        onClick={() => setIsCartVisible(!isCartVisible)} 
+                        className="relative p-2 text-gray-600 hover:text-orange-500 transition-colors" 
+                        aria-label="Voir le panier"
+                        animate={cartControls}
+                    >
                         <ShoppingCart className="w-7 h-7" />
                         {cart.length > 0 && (
-                            <span className="absolute -top-1 -right-1 block h-5 w-5 rounded-full ring-2 ring-gray-100 bg-red-500 text-white text-xs flex items-center justify-center">
+                            <motion.span layout className="absolute -top-1 -right-1 block h-5 w-5 rounded-full ring-2 ring-gray-100 bg-red-500 text-white text-xs flex items-center justify-center">
                                 {cart.length}
-                            </span>
+                            </motion.span>
                         )}
-                    </button>
+                    </motion.button>
                 </div>
             </header>
              <div className="text-center">
@@ -719,12 +792,12 @@ export default function App() {
                             {filteredOffers.length} {filteredOffers.length > 1 ? T.ui_results_for : T.ui_result_for}
                           </p>
                             {filteredOffers.map((offer, index) => (
-                                <motion.div key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }} className="bg-white border border-gray-200 p-3 rounded-lg hover:shadow-lg hover:border-orange-300 transition-all duration-200 flex flex-col justify-between">
+                                <motion.div key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }} className="offer-card bg-white border border-gray-200 p-3 rounded-lg hover:shadow-lg hover:border-orange-300 transition-all duration-200 flex flex-col justify-between">
                                   <div>
                                     <a href={offer.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-orange-600 hover:underline">{(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}</a>
                                     <p className="text-sm text-gray-700 mt-1">{(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}</p>
                                   </div>
-                                  <button onClick={() => addToCart(offer)} className="mt-3 w-full bg-orange-100 text-orange-800 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-200 transition-colors text-sm flex items-center justify-center gap-2">
+                                  <button onClick={(e) => addToCart(offer, e)} className="mt-3 w-full bg-orange-100 text-orange-800 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-200 transition-colors text-sm flex items-center justify-center gap-2">
                                     <PlusCircle size={16} /> {T.ui_add_to_cart}
                                   </button>
                                 </motion.div>
