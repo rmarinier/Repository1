@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { Sparkles, MessageCircle, X, RotateCcw, Send, Mic, Paperclip, FileText, CheckCircle, Search } from 'lucide-react';
+import { Sparkles, MessageCircle, X, RotateCcw, Send, Mic, Paperclip, FileText, CheckCircle, Search, Headset, Phone, MessageSquare, Mail, PhoneForwarded, CalendarClock, ArrowLeft } from 'lucide-react';
 
 // --- DATABASE SIMULATION (Updated from user's Excel file) ---
 const csvData = `
@@ -64,7 +64,6 @@ function parseCsv(csv) {
             headers.forEach((header, i) => {
                 let key = header.toLowerCase();
                 let value = values[i] || '';
-                // **FIX**: Ensure associated_keywords is always an array
                 if (key === 'associated_keywords') {
                     value = value.split(',').map(kw => kw.trim()).filter(Boolean);
                 }
@@ -88,6 +87,7 @@ const translations = {
         'internet access': 'Accès Internet', 'ai': 'Intelligence Artificielle',
         'gestion de flotte': 'Gestion de Flotte', '5g': '5G', 'mdm': 'MDM', 'iot': 'IoT', 'telephony': 'Téléphonie',
         'collaboration': 'Collaboration', 'data platform': 'Plateforme Data', 'cdp': 'CDP', 'analytics': 'Analytics', 'network security': 'Sécurité Réseau', 'voip': 'Voix sur IP',
+        'cisco': 'Cisco', 'webex': 'Webex',
         
         // UI Text
         'ui_results_for': 'résultats pour', 'ui_result_for': 'résultat pour',
@@ -99,6 +99,16 @@ const translations = {
         'ui_upload_summary_title': 'Analyse terminée !',
         'ui_upload_summary_desc': 'J\'ai identifié des besoins en Cloud Hybride et Cyberdéfense. Pour vous mettre en relation avec un expert, veuillez compléter ces informations :',
         'ui_upload_submit': 'Contacter un expert', 'ui_upload_success': 'Merci ! Un expert vous contactera bientôt.',
+        'proactive_webex_licenses': "J'ai vu que vous consultiez notre offre Workplace Together avec Webex. Saviez-vous que nous avons des tarifs très avantageux si vous avez besoin de plus de 10 licences ?",
+        'proactive_webex_cta': "Obtenir une offre personnalisée",
+        'ui_contact_advisor': 'Contacter un conseiller',
+        'ui_contact_by_phone': 'Par téléphone',
+        'ui_contact_by_chat': 'Démarrer un chat',
+        'ui_contact_by_email': 'Par e-mail',
+        'ui_contact_callback_now': 'Être rappelé maintenant',
+        'ui_contact_callback_schedule': 'Planifier un rappel',
+        'ui_contact_confirm_callback': 'Confirmer le rappel',
+        'ui_contact_request_received': 'Votre demande a bien été prise en compte.',
 
         // Offers translation
         offers: {
@@ -148,16 +158,14 @@ const translations = {
     }
 };
 
-// **FIX**: Auto-populate English translations from the source 'offers' array
 translations.en.offers = offers.reduce((acc, offer) => {
     acc[offer.offer_id] = { name: offer.offer_name, desc: offer.description };
     return acc;
 }, {});
 
-// **FIX**: Add all UI translations to the english object
 Object.keys(translations.fr).forEach(key => {
-    if(!key.startsWith('ui_') && !translations.en[key]) {
-        translations.en[key] = key; // Fallback for keywords
+    if(!key.startsWith('ui_') && !translations.en[key] && key !== 'offers') {
+        translations.en[key] = key;
     }
 });
 translations.en.ui_results_for = 'results for';
@@ -173,8 +181,16 @@ translations.en.ui_upload_summary_title = 'Analysis complete!';
 translations.en.ui_upload_summary_desc = "I've identified needs in Hybrid Cloud and Cybersecurity. To connect you with an expert, please complete this information:";
 translations.en.ui_upload_submit = 'Contact an expert';
 translations.en.ui_upload_success = 'Thank you! An expert will contact you shortly.';
-
-
+translations.en.proactive_webex_licenses = "I see you're looking at our Workplace Together with Webex offer. Did you know we have very attractive pricing if you need more than 10 licenses?";
+translations.en.proactive_webex_cta = "Get a custom quote";
+translations.en.ui_contact_advisor = 'Contact an advisor';
+translations.en.ui_contact_by_phone = 'By phone';
+translations.en.ui_contact_by_chat = 'Start a chat';
+translations.en.ui_contact_by_email = 'By email';
+translations.en.ui_contact_callback_now = 'Get a callback now';
+translations.en.ui_contact_callback_schedule = 'Schedule a callback';
+translations.en.ui_contact_confirm_callback = 'Confirm callback';
+translations.en.ui_contact_request_received = 'Your request has been received.';
 
 const personas = {
     cio: { color: { text: 'text-blue-800', bg: 'bg-blue-50', border: 'border-blue-200', hoverBg: 'hover:bg-blue-100', hoverBorder: 'hover:border-blue-400', selectedBg: 'bg-blue-500' }, tags: ['sd-wan', 'cloud', 'internet access', 'lan', 'wan', 'cloud connectivity', 'sase', 'network security', 'cisco', 'cloud management', 'iaas', 'sovereign cloud', 'it services', 'observability'] },
@@ -254,8 +270,15 @@ function getAvailableKeywords(selected, offers) {
 }
 
 const LanguageFlag = ({ lang }) => {
-    const flags = { fr: '�🇷', en: '🇬🇧' };
+    const flags = { fr: '🇫🇷', en: '🇬🇧' };
     return <span className="text-xl">{flags[lang] || '🌐'}</span>;
+};
+
+const proactiveTriggers = {
+    'https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex': {
+      messageKey: 'proactive_webex_licenses',
+      ctaKey: 'proactive_webex_cta'
+    }
 };
 
 // --- MAIN APP COMPONENT ---
@@ -266,13 +289,24 @@ export default function App() {
   const [initialKeywords, setInitialKeywords] = useState([]);
   const [activePersonaKey, setActivePersonaKey] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentView, setCurrentView] = useState('initial'); 
+  const [currentView, setCurrentView] = useState('initial');
+  
+  const [currentUrl, setCurrentUrl] = useState('https://www.orange-business.com/be-en/');
+  const [hasProactiveMessage, setHasProactiveMessage] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+
 
   useEffect(() => {
     if (chatOpen && initialKeywords.length === 0) {
         setInitialKeywords(generateInitialKeywords(3));
     }
   }, [chatOpen, initialKeywords]);
+  
+  useEffect(() => {
+    const trigger = proactiveTriggers[currentUrl];
+    setHasProactiveMessage(!!trigger);
+  }, [currentUrl]);
+
 
   const T = translations[language] || translations.en;
 
@@ -310,16 +344,33 @@ export default function App() {
     setSelected([]);
     setActivePersonaKey(null);
     setCurrentView('initial');
-    setInitialKeywords(generateInitialKeywords(3));
+    setShowSchedule(false);
+    if (initialKeywords.length === 0) {
+        setInitialKeywords(generateInitialKeywords(3));
+    }
   }
 
-  const handleOpenChat = () => {
+  const handleOpenChat = (view = 'initial') => {
       setChatOpen(true);
-      if(initialKeywords.length === 0){
-          setInitialKeywords(generateInitialKeywords(3));
+      const trigger = proactiveTriggers[currentUrl];
+      
+      if(view !== 'initial') {
+        setCurrentView(view);
+      } else if (trigger) {
+          setCurrentView('proactive_message');
+      } else {
+          setCurrentView('initial');
+          if (initialKeywords.length === 0) {
+              setInitialKeywords(generateInitialKeywords(3));
+          }
       }
   }
-  const handleCloseChat = () => setChatOpen(false);
+  const handleCloseChat = () => {
+      setChatOpen(false);
+      setTimeout(() => {
+          handleReset();
+      }, 300);
+  }
 
   const allLanguages = ["fr", "en"]; 
 
@@ -369,32 +420,47 @@ export default function App() {
     setIsLoading(false);
     e.target.elements.prompt.value = '';
   }
-
-  const handleRFPFlow = () => {
-      setCurrentView('rfp_analyzing');
-      setTimeout(() => { setCurrentView('rfp_form'); }, 2500);
+  
+  const handleContactRequest = () => {
+    setCurrentView('contact_confirmation');
+    setTimeout(() => {
+        handleCloseChat();
+    }, 2500);
   }
 
-  const handleRFPFormSubmit = (e) => {
-      e.preventDefault();
-      setCurrentView('rfp_success');
-      setTimeout(() => { handleCloseChat(); }, 3000);
+  const handleScheduleSubmit = (e) => {
+    e.preventDefault();
+    handleContactRequest();
   }
   
   const showResultsPanel = selected.length > 0;
 
   // --- RENDER ---
   return (
-    <div className="relative min-h-screen bg-gray-100 text-gray-900 p-8 flex flex-col items-center justify-center font-sans">
-      <div className="text-center">
+    <div className="relative min-h-screen bg-gray-100 text-gray-900 p-8 flex flex-col items-center font-sans">
+      <div className="w-full max-w-2xl text-center">
         <h1 className="text-3xl font-bold">Page d'Exemple</h1>
-        <p className="mt-2 text-lg text-gray-600">Cliquez sur l'icône en bas à droite pour tester l'agent IA.</p>
+        <p className="mt-2 text-lg text-gray-600">Simulez la navigation pour déclencher l'agent proactif.</p>
+        <div className="flex flex-wrap justify-center gap-4 mt-8">
+            <button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.endsWith('/') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page d'accueil</button>
+            <button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.includes('workplace-together-webex') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page Webex</button>
+        </div>
       </div>
 
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
         <div className="relative flex items-center justify-center w-20 h-20">
-          <div className="absolute inline-flex h-full w-full rounded-full bg-orange-500 opacity-20 animate-ping"></div>
-          <button onClick={chatOpen ? handleCloseChat : handleOpenChat} className="relative z-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl transition-all duration-200 ease-in-out transform hover:scale-110" aria-label="Toggle GenAI Agent">
+            {!chatOpen && (
+                <div className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-40 animate-ping [animation-duration:2.7s]"></div>
+            )}
+            <AnimatePresence>
+            {hasProactiveMessage && !chatOpen && (
+                <motion.div initial={{scale:0}} animate={{scale:1}} exit={{scale:0}} className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping"></motion.div>
+            )}
+            </AnimatePresence>
+          <button onClick={chatOpen ? handleCloseChat : () => handleOpenChat()} className="relative z-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl transition-all duration-200 ease-in-out transform hover:scale-110" aria-label="Toggle GenAI Agent">
+            {hasProactiveMessage && !chatOpen && (
+                 <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500" />
+            )}
             {chatOpen ? <X className="w-7 h-7" /> : <Sparkles className="w-7 h-7" />}
           </button>
         </div>
@@ -464,25 +530,60 @@ export default function App() {
                       </motion.div>
                     )}
                     
-                    {/* RFP Flow Views */}
+                    {currentView === 'contact' && (
+                        <motion.div key="contact-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5">
+                            <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
+                            <div className="space-y-3">
+                                <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Phone className="text-orange-500"/>{T.ui_contact_by_phone}</button>
+                                <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><MessageSquare className="text-orange-500"/>{T.ui_contact_by_chat}</button>
+                                <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Mail className="text-orange-500"/>{T.ui_contact_by_email}</button>
+                                <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><PhoneForwarded className="text-orange-500"/>{T.ui_contact_callback_now}</button>
+                                <button onClick={() => setShowSchedule(!showSchedule)} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><CalendarClock className="text-orange-500"/>{T.ui_contact_callback_schedule}</button>
+                                <AnimatePresence>
+                                {showSchedule && (
+                                    <motion.form onSubmit={handleScheduleSubmit} initial={{opacity: 0, height: 0}} animate={{opacity:1, height: 'auto'}} exit={{opacity:0, height: 0}} className="pl-6 pt-2 space-y-2">
+                                        <input type="date" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+                                        <input type="time" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+                                        <button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors">{T.ui_contact_confirm_callback}</button>
+                                    </motion.form>
+                                )}
+                                </AnimatePresence>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {currentView === 'contact_confirmation' && (
+                        <motion.div key="contact-confirm-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-8 flex flex-col items-center justify-center h-full text-center">
+                            <CheckCircle className="w-16 h-16 text-green-500" />
+                            <p className="mt-4 font-semibold text-lg text-gray-800">{T.ui_contact_request_received}</p>
+                        </motion.div>
+                    )}
+
+                    {currentView === 'proactive_message' && proactiveTriggers[currentUrl] && (
+                        <motion.div key="proactive-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-6 text-center">
+                            <Sparkles className="w-12 h-12 mx-auto text-orange-500" />
+                            <p className="mt-4 font-semibold text-gray-800">{T[proactiveTriggers[currentUrl].messageKey]}</p>
+                            <motion.button onClick={() => setCurrentView('contact')} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="mt-6 w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">{T[proactiveTriggers[currentUrl].ctaKey]}</motion.button>
+                        </motion.div>
+                    )}
+                    
                     {currentView.startsWith('rfp') && (
                         <>
-                        {currentView === 'rfp' && <motion.div key="rfp-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-6 text-center"><FileText className="w-12 h-12 mx-auto text-orange-500" /><h2 className="mt-4 font-semibold text-lg">{T.ui_upload_title}</h2><p className="mt-1 text-sm text-gray-600">{T.ui_upload_subtitle}</p><motion.button onClick={handleRFPFlow} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="mt-6 w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">{T.ui_upload_cta}</motion.button></motion.div>}
-                        {currentView === 'rfp_analyzing' && <motion.div key="rfp-analyzing" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-8 text-center flex flex-col justify-center items-center h-full"><motion.div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" /><p className="mt-4 font-semibold text-gray-700">{T.ui_upload_analyzing}</p></motion.div>}
-                        {currentView === 'rfp_form' && <motion.div key="rfp-form" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5"><h3 className="font-semibold text-lg">{T.ui_upload_summary_title}</h3><p className="text-sm text-gray-600 mt-1">{T.ui_upload_summary_desc}</p><form onSubmit={handleRFPFormSubmit} className="mt-4 space-y-3"><input type="text" placeholder="Nom, Prénom" required className="w-full p-2 text-sm bg-gray-50 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/><input type="text" placeholder="Société" required className="w-full p-2 text-sm bg-gray-50 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/><input type="email" placeholder="Email professionnel" required className="w-full p-2 text-sm bg-gray-50 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/><button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors">{T.ui_upload_submit}</button></form></motion.div>}
-                        {currentView === 'rfp_success' && <motion.div key="rfp-success" initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}} className="p-8 text-center flex flex-col justify-center items-center h-full"><CheckCircle className="w-16 h-16 text-green-500" /><p className="mt-4 font-semibold text-lg text-gray-800">{T.ui_upload_success}</p></motion.div>}
+                        {currentView === 'rfp' && <motion.div key="rfp-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-6 text-center"><FileText className="w-12 h-12 mx-auto text-orange-500" /><h2 className="mt-4 font-semibold text-lg">{T.ui_upload_title}</h2><p className="mt-1 text-sm text-gray-600">{T.ui_upload_subtitle}</p><motion.button onClick={() => {}} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="mt-6 w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">{T.ui_upload_cta}</motion.button></motion.div>}
                         </>
                     )}
+
 
                   </AnimatePresence>
                 </div>
                 
                 <div className="p-3 mt-auto border-t border-gray-200 bg-white">
                   <form onSubmit={handlePromptSubmit} className="relative flex items-center">
-                      <input type="text" name="prompt" disabled={isLoading} placeholder={T.ui_prompt_placeholder} className="w-full pl-4 pr-24 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow disabled:bg-gray-100 text-sm"/>
+                      <input type="text" name="prompt" disabled={isLoading} placeholder={T.ui_prompt_placeholder} className="w-full pl-4 pr-32 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow disabled:bg-gray-100 text-sm"/>
                       <div className="absolute right-12 flex items-center">
-                        <button type="button" onClick={() => setCurrentView('rfp')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full"><Paperclip className="w-5 h-5"/></button>
-                        <button type="button" className="p-2 text-gray-500 hover:text-orange-600 rounded-full"><Mic className="w-5 h-5"/></button>
+                        <button type="button" onClick={() => setCurrentView('rfp')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title="Analyser un document"><Paperclip className="w-5 h-5"/></button>
+                        <button type="button" onClick={() => setCurrentView('contact')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title={T.ui_contact_advisor}><Headset className="w-5 h-5"/></button>
+                        <button type="button" className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title="Recherche vocale"><Mic className="w-5 h-5"/></button>
                       </div>
                       <button type="submit" disabled={isLoading} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors">
                           {isLoading ? <motion.div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send className="w-5 h-5"/>}
@@ -531,4 +632,3 @@ export default function App() {
     </div>
   );
 }
-�
