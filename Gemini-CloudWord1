@@ -46,27 +46,19 @@ const csvData = `
 "O045","Cyber-résilience","Expertise","Security","Consulting","Build a comprehensive strategy to anticipate, protect, detect, and respond to cyber threats, ensuring business continuity.","https://www.orange-business.com/be-en/expertise/cyber-resilience","cyber resilience,business continuity,disaster recovery,incident response,tag_securite_globale",
 `;
 
-// This function parses the CSV data into an array of offer objects.
 function parseCsv(csv) {
     const lines = csv.trim().split('\n').slice(1);
     const headers = ["Offer_ID","Offer_Name","Category_Type","Primary_Category_Name","Sub_Category_Name","Description","URL","Associated_Keywords","Partner_Name"];
-    
     const offersMap = new Map();
-
     lines.forEach(line => {
-        // Regex to handle quoted values that might contain commas
         const values = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)?.map(val => val.replace(/^"|"$/g, '')) || [];
-        
         if (values.length === 0) return;
-
         const offerId = values[0];
-        
         if (offerId && !offersMap.has(offerId)) {
             const obj = {};
             headers.forEach((header, i) => {
                 let key = header.toLowerCase();
                 let value = values[i] || '';
-                // Keywords are split into an array for easier filtering
                 if (key === 'associated_keywords') {
                     value = value.split(',').map(kw => kw.trim()).filter(Boolean);
                 }
@@ -75,25 +67,26 @@ function parseCsv(csv) {
             offersMap.set(offerId, obj);
         }
     });
-
     return Array.from(offersMap.values());
 }
 
-
 const offers = parseCsv(csvData);
 
-// --- TRANSLATIONS & CONFIGURATION ---
+const proServicesProduct = {
+    offer_id: "PS-WCS",
+    offer_name: "Services Professionnels pour Workplace",
+    description: "Accompagnement pour le déploiement et l'adoption de votre solution Workplace Together.",
+    associated_keywords: ['professional services', 'deployment', 'webex', 'collaboration']
+};
+
 const translations = {
     fr: {
-        // Keywords
         'sd-wan': 'SD-WAN', 'lan': 'LAN', 'wan': 'WAN', 'cybersecurity': 'Cybersécurité', 'sase': 'SASE', 
         'genai': 'IA Générative', 'cloud': 'Cloud', 'contact center': 'Contact Center',
         'internet access': 'Accès Internet', 'ai': 'Intelligence Artificielle',
         'gestion de flotte': 'Gestion de Flotte', '5g': '5G', 'mdm': 'MDM', 'iot': 'IoT', 'telephony': 'Téléphonie',
         'collaboration': 'Collaboration', 'data platform': 'Plateforme Data', 'cdp': 'CDP', 'analytics': 'Analytics', 'network security': 'Sécurité Réseau', 'voip': 'Voix sur IP',
         'cisco': 'Cisco', 'webex': 'Webex',
-        
-        // UI Text
         'ui_results_for': 'résultats pour', 'ui_result_for': 'résultat pour',
         'ui_refine_search': 'Affiner votre recherche :', 'ui_prompt_placeholder': 'Décrivez votre besoin...',
         'ui_no_match': 'Aucune offre ne correspond à cette sélection.',
@@ -127,33 +120,28 @@ const translations = {
         'ui_cart_title': 'Votre Panier',
         'ui_cart_empty': 'Votre panier est vide.',
         'ui_cart_checkout': 'Passer la commande',
-
-
-        // Offers translation (example)
+        'ui_pro_services_title': "Ajouter les Services Professionnels ?",
+        'ui_pro_services_desc': "Nos experts peuvent vous accompagner pour le déploiement de Workplace Together. Souhaitez-vous ajouter ce service à votre panier ?",
+        'ui_pro_services_confirm': "Oui, ajouter le service",
+        'ui_pro_services_decline': "Non, merci",
         offers: {
             "O001":{ name: "Workplace Together [Webex]", desc: "Outils de téléphonie et de collaboration Cisco gérés par Orange. Transforme la téléphonie traditionnelle en communications unifiées modernes." },
             "O002":{ name: "Intégration de services multi-sources (MSI)", desc: "Gérez de manière centralisée toutes les dépenses et les performances de vos services informatiques." },
             "O003":{ name: "Évaluation de l'architecture Data & IA", desc: "Optimiser la création de valeur grâce à une plateforme de données moderne et efficace." },
             "O019":{ name: "SD-WAN Flexible (Cisco)", desc: "Performance, gestion simplifiée, sécurité et accès cloud optimisé avec Cisco Catalyst SD-WAN." },
             "O013":{ name: "Internet Platinum", desc: "Un accès Internet dédié avec une bande passante 100% garantie sur le réseau Orange." },
+            "PS-WCS": { name: "Services Professionnels pour Workplace", desc: "Accompagnement pour le déploiement et l'adoption de votre solution Workplace Together."}
         }
     },
-    en: {
-        // Auto-populating EN translations
-    }
+    en: {}
 };
 
-// Auto-populate English translations from the source data
 translations.en.offers = offers.reduce((acc, offer) => {
     acc[offer.offer_id] = { name: offer.offer_name, desc: offer.description };
     return acc;
 }, {});
-
-Object.keys(translations.fr).forEach(key => {
-    if(!key.startsWith('ui_') && !translations.en[key] && key !== 'offers') {
-        translations.en[key] = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-});
+translations.en.offers[proServicesProduct.offer_id] = { name: "Professional Services for Workplace", desc: "Support for the deployment and adoption of your Workplace Together solution." };
+Object.keys(translations.fr).forEach(key => { if(!key.startsWith('ui_') && !translations.en[key] && key !== 'offers') { translations.en[key] = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); }});
 translations.en.ui_results_for = 'results for';
 translations.en.ui_result_for = 'result for';
 translations.en.ui_refine_search = 'Refine your search:';
@@ -191,9 +179,11 @@ translations.en.ui_back_to_offers = 'Back to offers';
 translations.en.ui_cart_title = 'Your Cart';
 translations.en.ui_cart_empty = 'Your cart is empty.';
 translations.en.ui_cart_checkout = 'Proceed to Checkout';
+translations.en.ui_pro_services_title = "Add Professional Services?";
+translations.en.ui_pro_services_desc = "Our experts can assist with the deployment of Workplace Together. Would you like to add this service to your cart?";
+translations.en.ui_pro_services_confirm = "Yes, add service";
+translations.en.ui_pro_services_decline = "No, thanks";
 
-
-// Configuration for different user personas, defining their associated keywords and color themes.
 const personas = {
     cio: { color: { text: 'text-blue-800', bg: 'bg-blue-50', border: 'border-blue-200', hoverBg: 'hover:bg-blue-100', hoverBorder: 'hover:border-blue-400', selectedBg: 'bg-blue-500' }, tags: ['sd-wan', 'cloud', 'internet access', 'lan', 'wan', 'cloud connectivity', 'sase', 'network security', 'cisco', 'cloud management', 'iaas', 'sovereign cloud', 'it services', 'observability'] },
     ciso: { color: { text: 'text-purple-800', bg: 'bg-purple-50', border: 'border-purple-200', hoverBg: 'hover:bg-purple-100', hoverBorder: 'hover:border-purple-400', selectedBg: 'bg-purple-500' }, tags: ['cybersecurity', 'sase', 'sécurité mobile', 'threat detection', 'data protection', 'network security', 'incident response', 'cyber resilience', 'endpoint security'] },
@@ -204,92 +194,38 @@ const personas = {
     data_leader: { color: { text: 'text-amber-800', bg: 'bg-amber-50', border: 'border-amber-200', hoverBg: 'hover:bg-amber-100', hoverBorder: 'hover:border-amber-400', selectedBg: 'bg-amber-500' }, tags: ['ai', 'genai', 'data platform', 'data architecture', 'analytics', 'data governance', 'data-driven cx'] }
 };
 
-
 const allKeywordsFromOffers = new Set(offers.flatMap(o => o.associated_keywords));
 
-// This function generates the initial set of keywords displayed to the user.
 function generateInitialKeywords(minOccurrences = 3) {
     const keywordOfferCount = {};
-    allKeywordsFromOffers.forEach(kw => {
-        if (kw.startsWith('tag_')) return;
-        keywordOfferCount[kw] = offers.filter(offer => offer.associated_keywords.includes(kw)).length;
-    });
-
+    allKeywordsFromOffers.forEach(kw => { if (kw.startsWith('tag_')) return; keywordOfferCount[kw] = offers.filter(offer => offer.associated_keywords.includes(kw)).length; });
     const eligibleKeywords = Object.keys(keywordOfferCount).filter(kw => keywordOfferCount[kw] >= minOccurrences);
-    
     const finalKeywords = new Map();
-
     const personaOrder = ['cio', 'telecom_manager', 'ciso', 'coo', 'cx_leader', 'data_leader', 'pme_owner']; 
-    
     const keywordsPerPersona = 5;
-
-    // Prioritize keywords based on personas to show a relevant selection.
     for (const personaKey of personaOrder) {
         const personaTags = personas[personaKey].tags;
-        
-        const personaEligibleKeywords = eligibleKeywords
-            .filter(kw => personaTags.includes(kw))
-            .sort((a, b) => keywordOfferCount[b] - keywordOfferCount[a]);
-        
+        const personaEligibleKeywords = eligibleKeywords.filter(kw => personaTags.includes(kw)).sort((a, b) => keywordOfferCount[b] - keywordOfferCount[a]);
         let count = 0;
-        for (const kw of personaEligibleKeywords) {
-            if (count >= keywordsPerPersona) break;
-            if (!finalKeywords.has(kw)) {
-                finalKeywords.set(kw, { keyword: kw, persona: personaKey });
-                count++;
-            }
-        }
+        for (const kw of personaEligibleKeywords) { if (count >= keywordsPerPersona) break; if (!finalKeywords.has(kw)) { finalKeywords.set(kw, { keyword: kw, persona: personaKey }); count++; } }
     }
-
     const shuffledKeywords = Array.from(finalKeywords.values());
-    for (let i = shuffledKeywords.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffledKeywords[i], shuffledKeywords[j]] = [shuffledKeywords[j], shuffledKeywords[i]];
-    }
-    
+    for (let i = shuffledKeywords.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffledKeywords[i], shuffledKeywords[j]] = [shuffledKeywords[j], shuffledKeywords[i]]; }
     return shuffledKeywords;
 }
 
-// This function determines which keywords are available for refinement based on the current selection.
 function getAvailableKeywords(selected, offers) {
-  const filteredOffers = selected.length > 0 
-    ? offers.filter(offer => selected.every(sel => offer.associated_keywords.includes(sel)))
-    : offers;
-
+  const filteredOffers = selected.length > 0 ? offers.filter(offer => selected.every(sel => offer.associated_keywords.includes(sel))) : offers;
   if (filteredOffers.length === 0) return [];
-  
   const keywordCount = {};
-  filteredOffers.forEach((offer) => {
-    offer.associated_keywords.forEach((kw) => {
-      if (!selected.includes(kw) && !kw.startsWith('tag_')) {
-          keywordCount[kw] = (keywordCount[kw] || 0) + 1;
-      }
-    });
-  });
-
-  return Object.entries(keywordCount)
-    .sort((a, b) => b[1] - a[1])
-    .map(([kw]) => kw)
-    .slice(0, 15);
+  filteredOffers.forEach((offer) => { offer.associated_keywords.forEach((kw) => { if (!selected.includes(kw) && !kw.startsWith('tag_')) { keywordCount[kw] = (keywordCount[kw] || 0) + 1; } }); });
+  return Object.entries(keywordCount).sort((a, b) => b[1] - a[1]).map(([kw]) => kw).slice(0, 15);
 }
 
-// A simple component to display language flags.
-const LanguageFlag = ({ lang }) => {
-    const flags = { fr: '🇫🇷', en: '🇬🇧' };
-    return <span className="text-xl">{flags[lang] || '🌐'}</span>;
-};
+const LanguageFlag = ({ lang }) => { const flags = { fr: '🇫🇷', en: '🇬🇧' }; return <span className="text-xl">{flags[lang] || '🌐'}</span>; };
+const proactiveTriggers = { 'https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex': { messageKey: 'proactive_webex_licenses', ctaKey: 'proactive_webex_cta' }};
 
-// Defines proactive message triggers based on the current URL.
-const proactiveTriggers = {
-    'https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex': {
-      messageKey: 'proactive_webex_licenses',
-      ctaKey: 'proactive_webex_cta'
-    }
-};
-
-// --- MAIN APP COMPONENT ---
 export default function App() {
-  // --- STATE MANAGEMENT ---
   const [selected, setSelected] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [language, setLanguage] = useState("fr");
@@ -297,624 +233,90 @@ export default function App() {
   const [activePersonaKey, setActivePersonaKey] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentView, setCurrentView] = useState('initial');
-  
-  // State for simulating page navigation
   const [currentUrl, setCurrentUrl] = useState('https://www.orange-business.com/be-en/');
   const [hasProactiveMessage, setHasProactiveMessage] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
-  
-  // E-commerce state
   const [cart, setCart] = useState([]);
   const [isCartVisible, setIsCartVisible] = useState(false);
-  const [flyingOffer, setFlyingOffer] = useState(null); // For "fly to cart" animation
-  const cartRef = useRef(null); // Ref for the cart icon
-  const cartControls = useAnimation(); // Animation controls for the cart icon
-  const prevCartLength = useRef(cart.length); // To detect when cart size changes
-
-  // **NEW**: State for the offer-specific chat
+  const [flyingOffer, setFlyingOffer] = useState(null);
+  const cartRef = useRef(null);
+  const cartControls = useAnimation();
+  const prevCartLength = useRef(cart.length);
   const [activeOfferForChat, setActiveOfferForChat] = useState(null);
   const [offerChatHistory, setOfferChatHistory] = useState([]);
   const [isAgentTyping, setIsAgentTyping] = useState(false);
+  const [proServicesPromptOffer, setProServicesPromptOffer] = useState(null);
 
-  // --- EFFECTS ---
-  
-  // Generate initial keywords when the chat is opened for the first time.
-  useEffect(() => {
-    if (chatOpen && initialKeywords.length === 0) {
-        setInitialKeywords(generateInitialKeywords(3));
-    }
-  }, [chatOpen, initialKeywords]);
-  
-  // Check for proactive message triggers when the simulated URL changes.
-  useEffect(() => {
-    const trigger = proactiveTriggers[currentUrl];
-    setHasProactiveMessage(!!trigger);
-  }, [currentUrl]);
-  
-  // Animate cart icon on item addition
-  useEffect(() => {
-    if (cart.length > prevCartLength.current) {
-        cartControls.start({
-            scale: [1, 1.3, 1],
-            rotate: [0, -10, 10, -10, 0],
-            transition: { duration: 0.5, ease: "easeInOut" }
-        });
-    }
-    prevCartLength.current = cart.length;
-  }, [cart.length, cartControls]);
-  
-  // Effect to manage view state transitions, preventing re-render loops.
-  useEffect(() => {
-    if (currentView !== 'offer_chat') {
-        if (selected.length > 0 && currentView === 'initial') {
-          setCurrentView('refinement');
-        } 
-        else if (selected.length === 0 && currentView === 'refinement') {
-          setCurrentView('initial');
-        }
-    }
-  }, [selected, currentView]);
+  useEffect(() => { if (chatOpen && initialKeywords.length === 0) { setInitialKeywords(generateInitialKeywords(3)); } }, [chatOpen, initialKeywords]);
+  useEffect(() => { setHasProactiveMessage(!!proactiveTriggers[currentUrl]); }, [currentUrl]);
+  useEffect(() => { if (cart.length > prevCartLength.current) { cartControls.start({ scale: [1, 1.3, 1], rotate: [0, -10, 10, -10, 0], transition: { duration: 0.5, ease: "easeInOut" } }); } prevCartLength.current = cart.length; }, [cart.length, cartControls]);
+  useEffect(() => { if (currentView !== 'offer_chat') { if (selected.length > 0 && currentView === 'initial') { setCurrentView('refinement'); } else if (selected.length === 0 && currentView === 'refinement') { setCurrentView('initial'); } } }, [selected, currentView]);
 
-
-  // --- MEMOIZED VALUES ---
   const T = translations[language] || translations.en;
-
-  // Filter offers based on selected keywords.
-  const filteredOffers = useMemo(() => selected.length
-    ? offers.filter((offer) => selected.every((kw) => offer.associated_keywords.includes(kw)))
-    : [], [selected]);
-    
-  // Get available keywords for refinement.
+  const filteredOffers = useMemo(() => selected.length ? offers.filter((offer) => selected.every((kw) => offer.associated_keywords.includes(kw))) : [], [selected]);
   const availableKeywords = useMemo(() => getAvailableKeywords(selected, offers), [selected]);
+  const sortedSelected = useMemo(() => [...selected].sort((a, b) => (T[a] || a).localeCompare(T[b] || b, language)), [selected, language, T]);
 
-  // Sort selected keywords alphabetically for consistent display.
-  const sortedSelected = useMemo(() => {
-    return [...selected].sort((a, b) => (T[a] || a).localeCompare(T[b] || b, language));
-  }, [selected, language, T]);
-
-  // --- HANDLERS ---
-  const handleSelectKeyword = (word, personaKey) => {
-    if (!selected.includes(word)) {
-        if (selected.length === 0 && personaKey) {
-            setActivePersonaKey(personaKey);
-        }
-        setSelected((prev) => [...prev, word]);
-    }
-  };
-  
-  const handleDeselectKeyword = (word) => {
-    setSelected((prev) => {
-        const newSelected = prev.filter((kw) => kw !== word);
-        if (newSelected.length === 0) {
-            setActivePersonaKey(null);
-        }
-        return newSelected;
-    });
-  };
-  
-  // Reset the state of the chat to its initial view.
-  const handleReset = () => {
-    setSelected([]);
-    setActivePersonaKey(null);
-    setCurrentView('initial');
-    setShowSchedule(false);
-    setActiveOfferForChat(null);
-    setOfferChatHistory([]);
-  }
-
-  const handleOpenChat = (view = 'initial') => {
-      setChatOpen(true);
-      const trigger = proactiveTriggers[currentUrl];
-      
-      if(view !== 'initial') {
-        setCurrentView(view);
-      } else if (trigger) {
-        setCurrentView('proactive_message');
-      } else {
-        setCurrentView(selected.length > 0 ? 'refinement' : 'initial');
-      }
-  }
-  const handleCloseChat = () => {
-      setChatOpen(false);
-      setTimeout(() => {
-          handleReset();
-      }, 300);
-  }
-
+  const handleSelectKeyword = (word, personaKey) => { if (!selected.includes(word)) { if (selected.length === 0 && personaKey) { setActivePersonaKey(personaKey); } setSelected((prev) => [...prev, word]); } };
+  const handleDeselectKeyword = (word) => { setSelected((prev) => { const newSelected = prev.filter((kw) => kw !== word); if (newSelected.length === 0) { setActivePersonaKey(null); } return newSelected; }); };
+  const handleReset = () => { setSelected([]); setActivePersonaKey(null); setCurrentView('initial'); setShowSchedule(false); setActiveOfferForChat(null); setOfferChatHistory([]); setProServicesPromptOffer(null); };
+  const handleOpenChat = (view = 'initial') => { setChatOpen(true); const trigger = proactiveTriggers[currentUrl]; if(view !== 'initial') { setCurrentView(view); } else if (trigger) { setCurrentView('proactive_message'); } else { setCurrentView(selected.length > 0 ? 'refinement' : 'initial'); }};
+  const handleCloseChat = () => { setChatOpen(false); setTimeout(() => { handleReset(); }, 300); };
   const allLanguages = ["fr", "en"]; 
-
-  // Handle the submission of the user's natural language prompt.
-  const handlePromptSubmit = async (e) => {
-    e.preventDefault();
-    const prompt = e.target.elements.prompt.value;
-    if (!prompt) return;
-    setIsLoading(true);
-    
-    let chatHistory = [{ role: "user", parts: [{ text: `From the user prompt "${prompt}", extract up to 5 relevant keywords from the following list. Return only a JSON object with a "keywords" array: [${Array.from(allKeywordsFromOffers).filter(k => !k.startsWith('tag_')).join(', ')}]` }] }];
-    const payload = {
-      contents: chatHistory,
-      generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "keywords": { "type": "ARRAY", "items": { "type": "STRING" } } } } }
-    };
-    const apiKey = "" 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-    try {
-        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        const result = await response.json();
-        let extracted = [];
-        const textToParse = result.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (textToParse) {
-            extracted = JSON.parse(textToParse).keywords || [];
-        }
-        handleReset();
-        if(extracted.length > 0) {
-          const firstKw = extracted[0];
-          const personaKey = Object.keys(personas).find(p => personas[p].tags.includes(firstKw)) || 'cio';
-          setActivePersonaKey(personaKey);
-          setSelected(extracted);
-        }
-    } catch (error) { console.error("Error with Gemini API or parsing:", error); }
-    
-    setIsLoading(false);
-    e.target.elements.prompt.value = '';
-  }
-  
-  const handleContactRequest = () => {
-    setCurrentView('contact_confirmation');
-    setTimeout(() => { handleCloseChat(); }, 2500);
-  }
-  
-  const handleRfpAnalysis = () => {
-    setCurrentView('rfp_analyzing');
-    setTimeout(() => { setCurrentView('rfp_summary'); }, 2500);
-  }
-
-  const handleScheduleSubmit = (e) => {
-    e.preventDefault();
-    handleContactRequest();
-  }
-
-  // **NEW**: Handlers for the offer-specific chat
-  const handleStartOfferChat = (offer) => {
-    const offerName = (T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name;
-    const welcomeMessage = {
-      role: 'agent',
-      text: T.ui_agent_welcome.replace('{offerName}', offerName)
-    };
-    setActiveOfferForChat(offer);
-    setOfferChatHistory([welcomeMessage]);
-    setCurrentView('offer_chat');
-  };
-
-  const handleOfferChatSubmit = async (e) => {
-    e.preventDefault();
-    const userMessageText = e.target.elements.prompt.value;
-    if (!userMessageText.trim()) return;
-
-    const newHistory = [...offerChatHistory, { role: 'user', text: userMessageText }];
-    setOfferChatHistory(newHistory);
-    e.target.elements.prompt.value = '';
-    setIsAgentTyping(true);
-
-    const offer = activeOfferForChat;
-    const salesPersonaPrompt = `You are Alex, a world-class salesperson for Orange Business, an expert in B2B technology solutions. You are engaging, empathetic, and extremely knowledgeable. Your goal is to help the customer understand if the selected offer is the perfect fit for their needs.
-    Context: The user is asking about the offer:
-    - Name: "${(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}"
-    - Description: "${(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}"
-    - Associated concepts: "${offer.associated_keywords.join(', ')}"
-    User's question: "${userMessageText}"
-    Your task: Answer in French. Maintain your persona as Alex. Ask clarifying questions to understand their needs. If the offer fits, guide them to the next step (add to cart or contact an expert). If not, suggest finding a better alternative.`;
-    
-    let chatHistory = [{ role: "user", parts: [{ text: salesPersonaPrompt }] }];
-    const payload = { contents: chatHistory };
-    const apiKey = "";
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-
-    try {
-      const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      const result = await response.json();
-      const agentResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || "Je ne suis pas sûr de comprendre. Pourriez-vous reformuler ?";
-      setOfferChatHistory(prev => [...prev, { role: 'agent', text: agentResponse }]);
-    } catch (error) {
-      console.error("Error calling Gemini for offer chat:", error);
-      setOfferChatHistory(prev => [...prev, { role: 'agent', text: "Désolé, une erreur s'est produite. Veuillez réessayer." }]);
-    } finally {
-      setIsAgentTyping(false);
-    }
-  };
-
-
-  // --- E-COMMERCE HANDLERS ---
-  const addToCart = (offer, e) => {
-      const cartIconRect = cartRef.current.getBoundingClientRect();
-      const offerRect = e.currentTarget.closest('.offer-card').getBoundingClientRect();
-      
-      setFlyingOffer({
-        ...offer,
-        id: new Date().getTime(), 
-        source: { x: offerRect.left, y: offerRect.top, width: offerRect.width, height: offerRect.height },
-        target: { x: cartIconRect.left + cartIconRect.width / 2, y: cartIconRect.top + cartIconRect.height / 2 },
-      });
-
-      setCart(prevCart => {
-        if (prevCart.find(item => item.offer_id === offer.offer_id)) return prevCart;
-        return [...prevCart, offer];
-      });
-  };
-
-  const removeFromCart = (offerId) => {
-      setCart(prevCart => prevCart.filter(item => item.offer_id !== offerId));
-  };
-  
+  const handlePromptSubmit = async (e) => { e.preventDefault(); const prompt = e.target.elements.prompt.value; if (!prompt) return; setIsLoading(true); let chatHistory = [{ role: "user", parts: [{ text: `From the user prompt "${prompt}", extract up to 5 relevant keywords from the following list. Return only a JSON object with a "keywords" array: [${Array.from(allKeywordsFromOffers).filter(k => !k.startsWith('tag_')).join(', ')}]` }] }]; const payload = { contents: chatHistory, generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "keywords": { "type": "ARRAY", "items": { "type": "STRING" } } } } } }; const apiKey = ""; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const result = await response.json(); let extracted = []; const textToParse = result.candidates?.[0]?.content?.parts?.[0]?.text; if (textToParse) { extracted = JSON.parse(textToParse).keywords || []; } handleReset(); if(extracted.length > 0) { const firstKw = extracted[0]; const personaKey = Object.keys(personas).find(p => personas[p].tags.includes(firstKw)) || 'cio'; setActivePersonaKey(personaKey); setSelected(extracted); } } catch (error) { console.error("Error with Gemini API or parsing:", error); } setIsLoading(false); e.target.elements.prompt.value = ''; };
+  const handleContactRequest = () => { setCurrentView('contact_confirmation'); setTimeout(() => { handleCloseChat(); }, 2500); };
+  const handleRfpAnalysis = () => { setCurrentView('rfp_analyzing'); setTimeout(() => { setCurrentView('rfp_summary'); }, 2500); };
+  const handleScheduleSubmit = (e) => { e.preventDefault(); handleContactRequest(); };
+  const handleStartOfferChat = (offer) => { const offerName = (T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name; const welcomeMessage = { role: 'agent', text: T.ui_agent_welcome.replace('{offerName}', offerName) }; setActiveOfferForChat(offer); setOfferChatHistory([welcomeMessage]); setCurrentView('offer_chat'); };
+  const handleOfferChatSubmit = async (e) => { e.preventDefault(); const userMessageText = e.target.elements.prompt.value; if (!userMessageText.trim()) return; const newHistory = [...offerChatHistory, { role: 'user', text: userMessageText }]; setOfferChatHistory(newHistory); e.target.elements.prompt.value = ''; setIsAgentTyping(true); const offer = activeOfferForChat; const salesPersonaPrompt = `You are Alex, a world-class salesperson for Orange Business, an expert in B2B technology solutions. You are engaging, empathetic, and extremely knowledgeable. Your goal is to help the customer understand if the selected offer is the perfect fit for their needs. Context: The user is asking about the offer: - Name: "${(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}" - Description: "${(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}" - Associated concepts: "${offer.associated_keywords.join(', ')}" User's question: "${userMessageText}" Your task: Answer in French. Maintain your persona as Alex. Ask clarifying questions to understand their needs. If the offer fits, guide them to the next step (add to cart or contact an expert). If not, suggest finding a better alternative.`; let chatHistory = [{ role: "user", parts: [{ text: salesPersonaPrompt }] }]; const payload = { contents: chatHistory }; const apiKey = ""; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const result = await response.json(); const agentResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || "Je ne suis pas sûr de comprendre. Pourriez-vous reformuler ?"; setOfferChatHistory(prev => [...prev, { role: 'agent', text: agentResponse }]); } catch (error) { console.error("Error calling Gemini for offer chat:", error); setOfferChatHistory(prev => [...prev, { role: 'agent', text: "Désolé, une erreur s'est produite. Veuillez réessayer." }]); } finally { setIsAgentTyping(false); } };
+  const executeAddToCart = (offer, sourceRect) => { if (sourceRect && cartRef.current) { const cartIconRect = cartRef.current.getBoundingClientRect(); setFlyingOffer({ ...offer, id: new Date().getTime() + Math.random(), source: { x: sourceRect.left, y: sourceRect.top, width: sourceRect.width, height: sourceRect.height }, target: { x: cartIconRect.left + cartIconRect.width / 2, y: cartIconRect.top + cartIconRect.height / 2 }, }); } setCart(prevCart => { if (prevCart.find(item => item.offer_id === offer.offer_id)) return prevCart; return [...prevCart, offer]; }); };
+  const addToCart = (offer, e) => { const rect = e.currentTarget.closest('.offer-card').getBoundingClientRect(); if (offer.offer_id === 'O001') { setProServicesPromptOffer({ offer: offer, rect: rect }); } else { executeAddToCart(offer, rect); } };
+  const handleConfirmProServices = () => { if (!proServicesPromptOffer) return; executeAddToCart(proServicesPromptOffer.offer, proServicesPromptOffer.rect); executeAddToCart(proServicesProduct, proServicesPromptOffer.rect); setProServicesPromptOffer(null); };
+  const handleDeclineProServices = () => { if (!proServicesPromptOffer) return; executeAddToCart(proServicesPromptOffer.offer, proServicesPromptOffer.rect); setProServicesPromptOffer(null); };
+  const removeFromCart = (offerId) => { setCart(prevCart => prevCart.filter(item => item.offer_id !== offerId)); };
   const showResultsPanel = selected.length > 0;
 
-  // --- RENDER ---
   return (
     <div className="relative min-h-screen bg-gray-100 text-gray-900 p-8 flex flex-col items-center font-sans">
-       <AnimatePresence>
-        {flyingOffer && (
-            <motion.div
-                key={flyingOffer.id}
-                className="fixed bg-white border-2 border-orange-400 rounded-lg z-[100] p-3 shadow-2xl overflow-hidden"
-                initial={{ x: flyingOffer.source.x, y: flyingOffer.source.y, width: flyingOffer.source.width, height: flyingOffer.source.height, opacity: 1 }}
-                animate={{ x: flyingOffer.target.x, y: flyingOffer.target.y, width: 0, height: 0, scale: 0.2, opacity: 0.5 }}
-                transition={{ type: "spring", stiffness: 80, damping: 15, mass: 1 }}
-                onAnimationComplete={() => setFlyingOffer(null)}
-            />
-        )}
-      </AnimatePresence>
-
-      <div className="w-full max-w-5xl">
-            <header className="relative w-full flex justify-between items-center mb-4">
-                <div className="flex-1"></div> {/* Spacer */}
-                <div className="flex-1 text-center">
-                    <h1 className="text-3xl font-bold">Page d'Exemple</h1>
-                </div>
-                <div className="flex-1 flex justify-end">
-                    <motion.button 
-                        ref={cartRef} 
-                        onClick={() => setIsCartVisible(!isCartVisible)} 
-                        className="relative p-2 text-gray-600 hover:text-orange-500 transition-colors" 
-                        aria-label="Voir le panier"
-                        animate={cartControls}
-                    >
-                        <ShoppingCart className="w-7 h-7" />
-                        {cart.length > 0 && (
-                            <motion.span layout className="absolute -top-1 -right-1 block h-5 w-5 rounded-full ring-2 ring-gray-100 bg-red-500 text-white text-xs flex items-center justify-center">
-                                {cart.length}
-                            </motion.span>
-                        )}
-                    </motion.button>
-                </div>
-            </header>
-             <div className="text-center">
-                <p className="mt-2 text-lg text-gray-600">Simulez la navigation pour déclencher l'agent proactif.</p>
-                <div className="flex flex-wrap justify-center gap-4 mt-8">
-                    <button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.endsWith('/') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page d'accueil</button>
-                    <button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.includes('workplace-together-webex') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page Webex</button>
-                </div>
-            </div>
-      </div>
-
-       <AnimatePresence>
-        {isCartVisible && (
-            <motion.div
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                className="absolute top-24 right-8 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-40"
-            >
-                <div className="p-4 border-b flex justify-between items-center">
-                    <h3 className="font-bold text-lg">{T.ui_cart_title}</h3>
-                    <button onClick={() => setIsCartVisible(false)} className="text-gray-500 hover:text-red-600"><X size={20}/></button>
-                </div>
-                <div className="p-4 max-h-96 overflow-y-auto">
-                    {cart.length === 0 ? (
-                        <p className="text-gray-500 text-center py-4">{T.ui_cart_empty}</p>
-                    ) : (
-                        <div className="space-y-3">
-                            {cart.map(item => (
-                                <div key={item.offer_id} className="flex items-center justify-between text-sm">
-                                    <span className="flex-1 pr-2">{(T.offers && T.offers[item.offer_id]?.name) || item.offer_name}</span>
-                                    <button onClick={() => removeFromCart(item.offer_id)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50" aria-label="Supprimer l'article">
-                                        <Trash2 size={16}/>
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-                {cart.length > 0 && (
-                     <div className="p-4 border-t bg-gray-50 rounded-b-xl">
-                        <button className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors">
-                            {T.ui_cart_checkout}
-                        </button>
-                    </div>
-                )}
-            </motion.div>
-        )}
-    </AnimatePresence>
-
+      <AnimatePresence>{proServicesPromptOffer && (<motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4"><motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl text-center"><Sparkles className="mx-auto h-12 w-12 text-orange-500"/><h3 className="text-xl font-bold mt-4 text-gray-900">{T.ui_pro_services_title}</h3><p className="mt-2 text-gray-600">{T.ui_pro_services_desc}</p><div className="mt-8 flex gap-4"><button onClick={handleDeclineProServices} className="flex-1 py-2 px-4 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold transition-colors">{T.ui_pro_services_decline}</button><button onClick={handleConfirmProServices} className="flex-1 py-2 px-4 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-semibold transition-colors shadow-lg">{T.ui_pro_services_confirm}</button></div></motion.div></motion.div>)}</AnimatePresence>
+      <AnimatePresence>{flyingOffer && (<motion.div key={flyingOffer.id} className="fixed bg-white border-2 border-orange-400 rounded-lg z-[100] p-3 shadow-2xl overflow-hidden" initial={{ x: flyingOffer.source.x, y: flyingOffer.source.y, width: flyingOffer.source.width, height: flyingOffer.source.height, opacity: 1 }} animate={{ x: flyingOffer.target.x, y: flyingOffer.target.y, width: 0, height: 0, scale: 0.2, opacity: 0.5 }} transition={{ type: "spring", stiffness: 80, damping: 15, mass: 1 }} onAnimationComplete={() => setFlyingOffer(null)}/>)}</AnimatePresence>
+      <div className="w-full max-w-5xl"><header className="relative w-full flex justify-between items-center mb-4"><div className="flex-1"></div><div className="flex-1 text-center"><h1 className="text-3xl font-bold">Page d'Exemple</h1></div><div className="flex-1 flex justify-end"><motion.button ref={cartRef} onClick={() => setIsCartVisible(!isCartVisible)} className="relative p-2 text-gray-600 hover:text-orange-500 transition-colors" aria-label="Voir le panier" animate={cartControls}><ShoppingCart className="w-7 h-7" />{cart.length > 0 && <motion.span layout className="absolute -top-1 -right-1 block h-5 w-5 rounded-full ring-2 ring-gray-100 bg-red-500 text-white text-xs flex items-center justify-center">{cart.length}</motion.span>}</motion.button></div></header><div className="text-center"><p className="mt-2 text-lg text-gray-600">Simulez la navigation pour déclencher l'agent proactif.</p><div className="flex flex-wrap justify-center gap-4 mt-8"><button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.endsWith('/') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page d'accueil</button><button onClick={() => setCurrentUrl('https://www.orange-business.com/be-en/solutions/collaboration-remote-working/workplace-together-webex')} className={`px-4 py-2 rounded-lg transition-colors ${currentUrl.includes('workplace-together-webex') ? 'bg-orange-500 text-white' : 'bg-white'}`}>Page Webex</button></div></div></div>
+      <AnimatePresence>{isCartVisible && (<motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }} className="absolute top-24 right-8 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-40"><div className="p-4 border-b flex justify-between items-center"><h3 className="font-bold text-lg">{T.ui_cart_title}</h3><button onClick={() => setIsCartVisible(false)} className="text-gray-500 hover:text-red-600"><X size={20}/></button></div><div className="p-4 max-h-96 overflow-y-auto">{cart.length === 0 ? <p className="text-gray-500 text-center py-4">{T.ui_cart_empty}</p> : (<div className="space-y-3">{cart.map(item => (<div key={item.offer_id} className="flex items-center justify-between text-sm"><span className="flex-1 pr-2">{(T.offers && T.offers[item.offer_id]?.name) || item.offer_name}</span><button onClick={() => removeFromCart(item.offer_id)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50" aria-label="Supprimer l'article"><Trash2 size={16}/></button></div>))}</div>)}</div>{cart.length > 0 && <div className="p-4 border-t bg-gray-50 rounded-b-xl"><button className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors">{T.ui_cart_checkout}</button></div>}</motion.div>)}</AnimatePresence>
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
-        <div className="relative flex items-center justify-center w-20 h-20">
-            {!chatOpen && (
-                <div className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-40 animate-ping [animation-duration:2.7s]"></div>
-            )}
-            <AnimatePresence>
-            {hasProactiveMessage && !chatOpen && (
-                <motion.div initial={{scale:0}} animate={{scale:1}} exit={{scale:0}} className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping"></motion.div>
-            )}
-            </AnimatePresence>
-          <button onClick={chatOpen ? handleCloseChat : () => handleOpenChat()} className="relative z-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl transition-all duration-200 ease-in-out transform hover:scale-110" aria-label="Toggle GenAI Agent">
-            {hasProactiveMessage && !chatOpen && (
-                 <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500" />
-            )}
-            {chatOpen ? <X className="w-7 h-7" /> : <Sparkles className="w-7 h-7" />}
-          </button>
-        </div>
-        
+        <div className="relative flex items-center justify-center w-20 h-20">{!chatOpen && <div className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-40 animate-ping [animation-duration:2.7s]"></div>}<AnimatePresence>{hasProactiveMessage && !chatOpen && <motion.div initial={{scale:0}} animate={{scale:1}} exit={{scale:0}} className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping"></motion.div>}</AnimatePresence><button onClick={chatOpen ? handleCloseChat : () => handleOpenChat()} className="relative z-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl transition-all duration-200 ease-in-out transform hover:scale-110" aria-label="Toggle GenAI Agent">{hasProactiveMessage && !chatOpen && <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500" />}{chatOpen ? <X className="w-7 h-7" /> : <Sparkles className="w-7 h-7" />}</button></div>
         <AnimatePresence>
         {chatOpen && (
-          <motion.div 
-            layout 
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ ease: "circOut", duration: 0.4 }}
-            className={`absolute bottom-24 right-0 max-h-[80vh] bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}
-          >
+          <motion.div layout initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }} transition={{ ease: "circOut", duration: 0.4 }} className={`absolute bottom-24 right-0 max-h-[80vh] bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}>
            <LayoutGroup> 
             <motion.div layout className={`flex flex-1 min-h-0 transition-all duration-500 ease-in-out ${showResultsPanel && currentView !== 'offer_chat' ? 'w-[48rem]' : 'w-[36rem]'}`}>
-              {/* Main chat panel */}
               <motion.div layout="position" className="flex-1 flex flex-col min-w-[24rem] max-w-lg">
-                <div className="flex justify-between items-center flex-shrink-0 p-4 border-b border-gray-200">
-                  <div className="flex gap-2">
-                    {allLanguages.map((lang) => (
-                      <button key={lang} onClick={() => setLanguage(lang)} className={`transition-transform duration-200 ${language === lang ? 'scale-125' : 'opacity-50 hover:opacity-100 hover:scale-110'}`} title={lang}>
-                          <LanguageFlag lang={lang} />
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <button onClick={handleReset} className="text-gray-500 hover:text-orange-600 transition-colors" aria-label="Réinitialiser"><RotateCcw className="w-5 h-5" /></button>
-                    <button onClick={handleCloseChat} className="text-gray-500 hover:text-red-600 transition-colors" aria-label="Fermer"><X className="w-5 h-5" /></button>
-                  </div>
-                </div>
-
-                {/* Main content area, switching between views */}
+                <div className="flex justify-between items-center flex-shrink-0 p-4 border-b border-gray-200"><div className="flex gap-2">{allLanguages.map((lang) => (<button key={lang} onClick={() => setLanguage(lang)} className={`transition-transform duration-200 ${language === lang ? 'scale-125' : 'opacity-50 hover:opacity-100 hover:scale-110'}`} title={lang}><LanguageFlag lang={lang} /></button>))}</div><div className="flex items-center gap-4"><button onClick={handleReset} className="text-gray-500 hover:text-orange-600 transition-colors" aria-label="Réinitialiser"><RotateCcw className="w-5 h-5" /></button><button onClick={handleCloseChat} className="text-gray-500 hover:text-red-600 transition-colors" aria-label="Fermer"><X className="w-5 h-5" /></button></div></div>
                 <div className="overflow-y-auto flex-grow">
                   <AnimatePresence mode="wait">
                     {(() => {
                         switch(currentView) {
-                             case 'initial':
-                                return (
-                                    <motion.div key="initial-view" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="p-6">
-                                        <div className="flex flex-wrap justify-center gap-2">
-                                            {initialKeywords.map(({keyword, persona}, index) => (
-                                              <motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium transition-all duration-200 ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>
-                                                {T[keyword] || keyword}
-                                              </motion.button>
-                                            ))}
-                                        </div>
-                                        <div className="mt-4 pt-4 border-t border-gray-200">
-                                          <button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-600 font-semibold"><LifeBuoy className="text-orange-500"/>{T.ui_faq_title}</button>
-                                        </div>
-                                    </motion.div>
-                                );
-                            
-                            case 'refinement':
-                                return (
-                                    <motion.div key="refinement-view" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: {delay: 0.2} }} exit={{ opacity: 0 }}>
-                                      <motion.div layout className="flex flex-wrap gap-2 p-4 border-b border-gray-200 flex-shrink-0 min-h-[44px]">
-                                         <AnimatePresence>
-                                         {sortedSelected.map(word => (
-                                            <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleDeselectKeyword(word)} className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full text-white ${personas[activePersonaKey]?.color.selectedBg || 'bg-gray-500'} hover:bg-red-500 transition-colors shadow-md`} title={`Retirer '${T[word] || word}'`}>
-                                              {T[word] || word} <X className="w-3 h-3" />
-                                            </motion.button>
-                                         ))}
-                                         </AnimatePresence>
-                                      </motion.div>
-                                      <div className="p-4">
-                                          { (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }
-                                          <div className="flex flex-wrap gap-2">
-                                              {availableKeywords.map((word, index) => (
-                                                  <motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border transition-colors ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg} ${personas[activePersonaKey]?.color.hoverBorder} flex items-center gap-1`}>
-                                                      {T[word] || word}
-                                                  </motion.button>
-                                              ))}
-                                          </div>
-                                      </div>
-                                    </motion.div>
-                                );
-
-                            case 'offer_chat':
-                                return (
-                                    <motion.div key="offer_chat" initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="flex flex-col h-full">
-                                        <div className="p-4 border-b border-gray-200 flex-shrink-0">
-                                            <button onClick={() => setCurrentView('refinement')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-2">
-                                                <ArrowLeft size={16}/> {T.ui_back_to_offers}
-                                            </button>
-                                            <h3 className="font-bold text-lg text-center text-orange-600">{(T.offers && T.offers[activeOfferForChat.offer_id]?.name) || activeOfferForChat.offer_name}</h3>
-                                        </div>
-                                        <div className="flex-grow p-4 space-y-4 overflow-y-auto">
-                                          {offerChatHistory.map((msg, index) => (
-                                            <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>
-                                              {msg.role === 'agent' && <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0"><Sparkles size={18}/></div>}
-                                              <div className={`max-w-xs md:max-w-md p-3 rounded-2xl ${msg.role === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-800 rounded-bl-none'}`}>
-                                                <p className="text-sm">{msg.text}</p>
-                                              </div>
-                                            </div>
-                                          ))}
-                                          {isAgentTyping && (
-                                              <div className="flex items-end gap-2">
-                                                  <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center flex-shrink-0"><Sparkles size={18}/></div>
-                                                  <div className="max-w-xs p-3 rounded-2xl bg-gray-200 rounded-bl-none">
-                                                      <div className="flex items-center justify-center gap-1.5">
-                                                          <motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity}} className="w-2 h-2 bg-gray-500 rounded-full"/>
-                                                          <motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.2}} className="w-2 h-2 bg-gray-500 rounded-full"/>
-                                                          <motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.4}} className="w-2 h-2 bg-gray-500 rounded-full"/>
-                                                      </div>
-                                                  </div>
-                                              </div>
-                                          )}
-                                        </div>
-                                         <div className="p-3 mt-auto border-t border-gray-200 bg-white">
-                                          <form onSubmit={handleOfferChatSubmit} className="relative flex items-center">
-                                              <input type="text" name="prompt" disabled={isAgentTyping} placeholder={T.ui_chat_prompt_placeholder} className="w-full pl-4 pr-12 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow disabled:bg-gray-100 text-sm"/>
-                                              <button type="submit" disabled={isAgentTyping} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors">
-                                                  <Send className="w-5 h-5"/>
-                                              </button>
-                                          </form>
-                                        </div>
-                                    </motion.div>
-                                );
-
-                             case 'rfp':
-                                return (
-                                    <motion.div key="rfp-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5 text-center">
-                                         <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
-                                        <h2 className="text-lg font-bold text-gray-800">{T.ui_upload_title}</h2>
-                                        <p className="text-sm text-gray-500 mt-1 mb-6">{T.ui_upload_subtitle}</p>
-                                        <motion.button onClick={handleRfpAnalysis} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">
-                                           {T.ui_upload_cta}
-                                        </motion.button>
-                                    </motion.div>
-                                );
-                            case 'rfp_analyzing':
-                                return (
-                                    <motion.div key="rfp-analyzing-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-8 flex flex-col items-center justify-center h-full text-center">
-                                       <motion.div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                                       <p className="mt-4 font-semibold text-gray-700">{T.ui_upload_analyzing}</p>
-                                    </motion.div>
-                                );
-                            case 'rfp_summary':
-                                return (
-                                     <motion.div key="rfp-summary-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-5">
-                                        <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
-                                        <div className="text-center">
-                                            <CheckCircle className="w-12 h-12 mx-auto text-green-500" />
-                                            <h2 className="text-lg font-bold text-gray-800 mt-3">{T.ui_upload_summary_title}</h2>
-                                            <p className="text-sm text-gray-600 mt-2 mb-4">{T.ui_upload_summary_desc}</p>
-                                        </div>
-                                        <form onSubmit={handleContactRequest} className="space-y-3">
-                                            <input type="text" placeholder="Nom complet" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
-                                            <input type="email" placeholder="Adresse e-mail" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
-                                            <button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors">{T.ui_upload_submit}</button>
-                                        </form>
-                                    </motion.div>
-                                );
-                            case 'contact':
-                                return (
-                                    <motion.div key="contact-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5">
-                                        <button onClick={() => setCurrentView(selected.length > 0 ? 'refinement' : 'initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
-                                        <div className="space-y-3">
-                                            <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Phone className="text-orange-500"/>{T.ui_contact_by_phone}</button>
-                                            <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><MessageSquare className="text-orange-500"/>{T.ui_contact_by_chat}</button>
-                                            <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><Mail className="text-orange-500"/>{T.ui_contact_by_email}</button>
-                                            <button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><PhoneForwarded className="text-orange-500"/>{T.ui_contact_callback_now}</button>
-                                            <button onClick={() => setShowSchedule(!showSchedule)} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><CalendarClock className="text-orange-500"/>{T.ui_contact_callback_schedule}</button>
-                                            <AnimatePresence>
-                                            {showSchedule && (
-                                                <motion.form onSubmit={handleScheduleSubmit} initial={{opacity: 0, height: 0}} animate={{opacity:1, height: 'auto'}} exit={{opacity:0, height: 0}} className="pl-6 pt-2 space-y-2">
-                                                    <input type="date" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
-                                                    <input type="time" required className="w-full p-2 text-sm bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-400"/>
-                                                    <button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600 transition-colors">{T.ui_contact_confirm_callback}</button>
-                                                </motion.form>
-                                            )}
-                                            </AnimatePresence>
-                                        </div>
-                                    </motion.div>
-                                );
-                            case 'contact_confirmation':
-                                return (
-                                     <motion.div key="contact-confirm-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-8 flex flex-col items-center justify-center h-full text-center">
-                                        <CheckCircle className="w-16 h-16 text-green-500" />
-                                        <p className="mt-4 font-semibold text-lg text-gray-800">{T.ui_contact_request_received}</p>
-                                    </motion.div>
-                                );
-                             case 'proactive_message':
-                                return proactiveTriggers[currentUrl] ? (
-                                    <motion.div key="proactive-view" initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} exit={{opacity:0}} className="p-6 text-center">
-                                        <Sparkles className="w-12 h-12 mx-auto text-orange-500" />
-                                        <p className="mt-4 font-semibold text-gray-800">{T[proactiveTriggers[currentUrl].messageKey]}</p>
-                                        <motion.button onClick={() => setCurrentView('contact')} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="mt-6 w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600 transition-colors">{T[proactiveTriggers[currentUrl].ctaKey]}</motion.button>
-                                    </motion.div>
-                                ) : null;
-                            case 'faq':
-                                return (
-                                    <motion.div key="faq-view" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="p-5 text-center">
-                                         <button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button>
-                                        <h2 className="text-lg font-bold text-gray-800">{T.ui_faq_title}</h2>
-                                        <p className="text-sm text-gray-500 mt-1 mb-4">{T.ui_faq_subtitle}</p>
-                                        <div className="space-y-2 text-left">
-                                            <button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">{T.ui_faq_prompt_1}</button>
-                                            <button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">{T.ui_faq_prompt_2}</button>
-                                            <button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">{T.ui_faq_prompt_3}</button>
-                                        </div>
-                                    </motion.div>
-                                );
-                            default:
-                                return null;
+                             case 'initial': return (<motion.div key="initial" className="p-6"><div className="flex flex-wrap justify-center gap-2">{initialKeywords.map(({keyword, persona}, index) => (<motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>{T[keyword] || keyword}</motion.button>))}</div><div className="mt-4 pt-4 border-t"><button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><LifeBuoy className="text-orange-500"/>{T.ui_faq_title}</button></div></motion.div>);
+                             case 'refinement': return (<motion.div key="refinement"><motion.div layout className="flex flex-wrap gap-2 p-4 border-b min-h-[44px]"><AnimatePresence>{sortedSelected.map(word => (<motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleDeselectKeyword(word)} className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full text-white ${personas[activePersonaKey]?.color.selectedBg || 'bg-gray-500'} hover:bg-red-500 shadow-md`}>{T[word] || word} <X className="w-3 h-3" /></motion.button>))}</AnimatePresence></motion.div><div className="p-4">{ (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }<div className="flex flex-wrap gap-2">{availableKeywords.map((word) => (<motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg}`}>{T[word] || word}</motion.button>))}</div></div></motion.div>);
+                             case 'offer_chat': return (<motion.div key="offer_chat" className="flex flex-col h-full"><div className="p-4 border-b"><button onClick={() => setCurrentView('refinement')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-2"><ArrowLeft size={16}/> {T.ui_back_to_offers}</button><h3 className="font-bold text-lg text-center text-orange-600">{(T.offers && T.offers[activeOfferForChat.offer_id]?.name) || activeOfferForChat.offer_name}</h3></div><div className="flex-grow p-4 space-y-4 overflow-y-auto">{offerChatHistory.map((msg, index) => (<div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>{msg.role === 'agent' && <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center shrink-0"><Sparkles size={18}/></div>}<div className={`max-w-xs md:max-w-md p-3 rounded-2xl ${msg.role === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 rounded-bl-none'}`}><p className="text-sm">{msg.text}</p></div></div>))}{isAgentTyping && (<div className="flex items-end gap-2"><div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center shrink-0"><Sparkles size={18}/></div><div className="p-3 rounded-2xl bg-gray-200 rounded-bl-none"><div className="flex items-center gap-1.5"><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity}} className="w-2 h-2 bg-gray-500 rounded-full"/><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.2}} className="w-2 h-2 bg-gray-500 rounded-full"/><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.4}} className="w-2 h-2 bg-gray-500 rounded-full"/></div></div></div>)}</div><div className="p-3 mt-auto border-t"><form onSubmit={handleOfferChatSubmit} className="relative flex items-center"><input type="text" name="prompt" disabled={isAgentTyping} placeholder={T.ui_chat_prompt_placeholder} className="w-full pl-4 pr-12 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:bg-gray-100 text-sm"/><button type="submit" disabled={isAgentTyping} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400"><Send className="w-5 h-5"/></button></form></div></motion.div>);
+                             case 'faq': return (<motion.div key="faq" className="p-5 text-center"><button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button><h2 className="text-lg font-bold">{T.ui_faq_title}</h2><p className="text-sm text-gray-500 mt-1 mb-4">{T.ui_faq_subtitle}</p><div className="space-y-2 text-left"><button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">{T.ui_faq_prompt_1}</button><button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">{T.ui_faq_prompt_2}</button><button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">{T.ui_faq_prompt_3}</button></div></motion.div>);
+                             case 'rfp': return (<motion.div key="rfp" className="p-5 text-center"><button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button><h2 className="text-lg font-bold">{T.ui_upload_title}</h2><p className="text-sm text-gray-500 mt-1 mb-6">{T.ui_upload_subtitle}</p><motion.button onClick={handleRfpAnalysis} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600">{T.ui_upload_cta}</motion.button></motion.div>);
+                             case 'rfp_analyzing': return (<motion.div key="rfp_analyzing" className="p-8 flex flex-col items-center justify-center h-full text-center"><motion.div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" /><p className="mt-4 font-semibold">{T.ui_upload_analyzing}</p></motion.div>);
+                             case 'rfp_summary': return (<motion.div key="rfp_summary" className="p-5"><button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button><div className="text-center"><CheckCircle className="w-12 h-12 mx-auto text-green-500" /><h2 className="text-lg font-bold mt-3">{T.ui_upload_summary_title}</h2><p className="text-sm text-gray-600 mt-2 mb-4">{T.ui_upload_summary_desc}</p></div><form onSubmit={handleContactRequest} className="space-y-3"><input type="text" placeholder="Nom complet" required className="w-full p-2 text-sm rounded-md border focus:outline-none focus:ring-2 focus:ring-orange-400"/><input type="email" placeholder="Adresse e-mail" required className="w-full p-2 text-sm rounded-md border focus:outline-none focus:ring-2 focus:ring-orange-400"/><button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600">{T.ui_upload_submit}</button></form></motion.div>);
+                             case 'contact': return (<motion.div key="contact" className="p-5"><button onClick={() => setCurrentView(selected.length > 0 ? 'refinement' : 'initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button><div className="space-y-3"><button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200"><Phone className="text-orange-500"/>{T.ui_contact_by_phone}</button><button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200"><MessageSquare className="text-orange-500"/>{T.ui_contact_by_chat}</button><button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200"><Mail className="text-orange-500"/>{T.ui_contact_by_email}</button><button onClick={handleContactRequest} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200"><PhoneForwarded className="text-orange-500"/>{T.ui_contact_callback_now}</button><button onClick={() => setShowSchedule(!showSchedule)} className="w-full flex items-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200"><CalendarClock className="text-orange-500"/>{T.ui_contact_callback_schedule}</button><AnimatePresence>{showSchedule && (<motion.form onSubmit={handleScheduleSubmit} initial={{opacity: 0, height: 0}} animate={{opacity:1, height: 'auto'}} exit={{opacity:0, height: 0}} className="pl-6 pt-2 space-y-2"><input type="date" required className="w-full p-2 text-sm rounded-md border focus:outline-none focus:ring-2 focus:ring-orange-400"/><input type="time" required className="w-full p-2 text-sm rounded-md border focus:outline-none focus:ring-2 focus:ring-orange-400"/><button type="submit" className="w-full p-2 bg-orange-500 text-white font-semibold rounded-md hover:bg-orange-600">{T.ui_contact_confirm_callback}</button></motion.form>)}</AnimatePresence></div></motion.div>);
+                             case 'contact_confirmation': return (<motion.div key="contact_confirmation" className="p-8 flex flex-col items-center justify-center h-full text-center"><CheckCircle className="w-16 h-16 text-green-500" /><p className="mt-4 font-semibold text-lg">{T.ui_contact_request_received}</p></motion.div>);
+                             case 'proactive_message': return proactiveTriggers[currentUrl] ? (<motion.div key="proactive" className="p-6 text-center"><Sparkles className="w-12 h-12 mx-auto text-orange-500" /><p className="mt-4 font-semibold">{T[proactiveTriggers[currentUrl].messageKey]}</p><motion.button onClick={() => setCurrentView('contact')} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="mt-6 w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600">{T[proactiveTriggers[currentUrl].ctaKey]}</motion.button></motion.div>) : null;
+                             default: return null;
                         }
                     })()}
                   </AnimatePresence>
                 </div>
-                
-                { currentView !== 'offer_chat' &&
-                    <div className="p-3 mt-auto border-t border-gray-200 bg-white">
-                      <form onSubmit={handlePromptSubmit} className="relative flex items-center">
-                          <input type="text" name="prompt" disabled={isLoading} placeholder={T.ui_prompt_placeholder} className="w-full pl-4 pr-32 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 transition-shadow disabled:bg-gray-100 text-sm"/>
-                          <div className="absolute right-12 flex items-center">
-                            <button type="button" onClick={() => setCurrentView('rfp')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title="Analyser un document"><Paperclip className="w-5 h-5"/></button>
-                            <button type="button" onClick={() => setCurrentView('contact')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title={T.ui_contact_advisor}><Headset className="w-5 h-5"/></button>
-                            <button type="button" className="p-2 text-gray-500 hover:text-orange-600 rounded-full" title="Recherche vocale"><Mic className="w-5 h-5"/></button>
-                          </div>
-                          <button type="submit" disabled={isLoading} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 transition-colors">
-                              {isLoading ? <motion.div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send className="w-5 h-5"/>}
-                          </button>
-                      </form>
-                    </div>
-                }
+                { currentView !== 'offer_chat' && <div className="p-3 mt-auto border-t"><form onSubmit={handlePromptSubmit} className="relative flex items-center"><input type="text" name="prompt" disabled={isLoading} placeholder={T.ui_prompt_placeholder} className="w-full pl-4 pr-32 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:bg-gray-100 text-sm"/><div className="absolute right-12 flex items-center"><button type="button" onClick={() => setCurrentView('rfp')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full"><Paperclip className="w-5 h-5"/></button><button type="button" onClick={() => setCurrentView('contact')} className="p-2 text-gray-500 hover:text-orange-600 rounded-full"><Headset className="w-5 h-5"/></button><button type="button" className="p-2 text-gray-500 hover:text-orange-600 rounded-full"><Mic className="w-5 h-5"/></button></div><button type="submit" disabled={isLoading} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400">{isLoading ? <motion.div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Send className="w-5 h-5"/>}</button></form></div>}
               </motion.div>
-
-              {/* Results panel (appears when offers are filtered) */}
               <AnimatePresence>
               {showResultsPanel && currentView !== 'offer_chat' && (
-                <motion.div 
-                    initial={{ opacity: 0, x: 20 }} 
-                    animate={{ opacity: 1, x: 0, transition: { delay: 0.2 } }} 
-                    exit={{ opacity: 0, x: 20, transition: {duration: 0.2} }} 
-                    className="flex-1 min-w-[22rem] flex flex-col border-l border-gray-200 bg-gray-50/50"
-                >
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="flex-1 min-w-[22rem] flex flex-col border-l bg-gray-50/50">
                   <div className="overflow-y-auto p-4 flex-grow">
-                      {filteredOffers.length > 0 ? (
-                        <div className="space-y-4">
-                          <p className="text-sm font-medium text-gray-600">
-                            {filteredOffers.length} {filteredOffers.length > 1 ? T.ui_results_for : T.ui_result_for}
-                          </p>
-                            {filteredOffers.map((offer, index) => (
-                                <motion.div key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.1 } }} className="offer-card bg-white border border-gray-200 p-3 rounded-lg hover:shadow-lg hover:border-orange-300 transition-all duration-200 flex flex-col justify-between">
-                                  <div>
-                                    <a href={offer.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-orange-600 hover:underline">{(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}</a>
-                                    <p className="text-sm text-gray-700 mt-1">{(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}</p>
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-3">
-                                      <button onClick={() => handleStartOfferChat(offer)} className="flex-1 bg-white border border-orange-500 text-orange-600 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-50 transition-colors text-sm flex items-center justify-center gap-2">
-                                        <MessageSquare size={16} /> {T.ui_learn_more}
-                                      </button>
-                                      <button onClick={(e) => addToCart(offer, e)} className="flex-1 bg-orange-100 text-orange-800 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-200 transition-colors text-sm flex items-center justify-center gap-2">
-                                        <PlusCircle size={16} /> {T.ui_add_to_cart}
-                                      </button>
-                                  </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6">
-                            <Search className="w-12 h-12 mb-4 text-gray-400" />
-                            <p className="font-semibold">{T.ui_no_match}</p>
-                        </div>
-                      )}
+                      {filteredOffers.length > 0 ? (<div className="space-y-4"><p className="text-sm font-medium text-gray-600">{filteredOffers.length} {filteredOffers.length > 1 ? T.ui_results_for : T.ui_result_for}</p>{filteredOffers.map((offer) => (<motion.div key={offer.offer_id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="offer-card bg-white border p-3 rounded-lg hover:shadow-lg hover:border-orange-300 transition-all duration-200 flex flex-col justify-between"><div><a href={offer.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-orange-600 hover:underline">{(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}</a><p className="text-sm text-gray-700 mt-1">{(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}</p></div><div className="flex items-center gap-2 mt-3"><button onClick={() => handleStartOfferChat(offer)} className="flex-1 bg-white border border-orange-500 text-orange-600 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-50 text-sm flex items-center justify-center gap-2"><MessageSquare size={16} /> {T.ui_learn_more}</button><button onClick={(e) => addToCart(offer, e)} className="flex-1 bg-orange-100 text-orange-800 font-semibold py-1.5 px-3 rounded-md hover:bg-orange-200 text-sm flex items-center justify-center gap-2"><PlusCircle size={16} /> {T.ui_add_to_cart}</button></div></motion.div>))}</div>) : (<div className="flex flex-col items-center justify-center h-full text-center text-gray-500 p-6"><Search className="w-12 h-12 mb-4 text-gray-400" /><p className="font-semibold">{T.ui_no_match}</p></div>)}
                   </div>
                 </motion.div>
               )}
