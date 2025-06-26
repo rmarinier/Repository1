@@ -298,6 +298,27 @@ function VoiceSearchSimulation({ T, onComplete, active }) {
     );
 }
 
+function MarkdownRenderer({ text }) {
+    const lines = text.split('\n');
+
+    return (
+        <div className="text-sm space-y-2">
+            {lines.map((line, i) => {
+                if (line.trim().startsWith('- ')) {
+                    const content = line.trim().substring(2);
+                    return (
+                        <div key={i} className="flex items-start">
+                            <span className="mr-2 mt-1 text-orange-500">&bull;</span>
+                            <span dangerouslySetInnerHTML={{ __html: content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                        </div>
+                    );
+                }
+                return <p key={i} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />;
+            })}
+        </div>
+    );
+}
+
 
 export default function App() {
   const [selected, setSelected] = useState([]);
@@ -314,6 +335,7 @@ export default function App() {
   const [isCartVisible, setIsCartVisible] = useState(false);
   const [flyingOffer, setFlyingOffer] = useState(null);
   const cartRef = useRef(null);
+  const chatButtonRef = useRef(null);
   const cartControls = useAnimation();
   const prevCartLength = useRef(cart.length);
   const [activeOfferForChat, setActiveOfferForChat] = useState(null);
@@ -321,6 +343,8 @@ export default function App() {
   const [isAgentTyping, setIsAgentTyping] = useState(false);
   const [proServicesPromptOffer, setProServicesPromptOffer] = useState(null);
   const [isVoiceSearchActive, setIsVoiceSearchActive] = useState(false);
+  const [suggestedQuestions, setSuggestedQuestions] = useState([]);
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
 
   useEffect(() => { if (chatOpen && initialKeywords.length === 0) { setInitialKeywords(generateInitialKeywords(3)); } }, [chatOpen, initialKeywords]);
@@ -349,7 +373,7 @@ export default function App() {
   
   const handleSelectKeyword = (word, personaKey) => { if (!selected.includes(word)) { if (selected.length === 0 && personaKey) { setActivePersonaKey(personaKey); } setSelected((prev) => [...prev, word]); } };
   const handleDeselectKeyword = (word) => { setSelected((prev) => { const newSelected = prev.filter((kw) => kw !== word); if (newSelected.length === 0) { setActivePersonaKey(null); } return newSelected; }); };
-  const handleReset = () => { setSelected([]); setActivePersonaKey(null); setCurrentView('initial'); setShowSchedule(false); setActiveOfferForChat(null); setOfferChatHistory([]); setProServicesPromptOffer(null); };
+  const handleReset = () => { setSelected([]); setActivePersonaKey(null); setCurrentView('initial'); setShowSchedule(false); setActiveOfferForChat(null); setOfferChatHistory([]); setProServicesPromptOffer(null); setSuggestedQuestions([]); };
   const handleOpenChat = (view = 'initial') => { setChatOpen(true); const trigger = proactiveTriggers[currentUrl]; if(view !== 'initial') { setCurrentView(view); } else if (trigger) { setCurrentView('proactive_message'); } else { setCurrentView(selected.length > 0 ? 'refinement' : 'initial'); }};
   const handleCloseChat = () => { setChatOpen(false); setTimeout(() => { handleReset(); }, 300); };
   const allLanguages = ["fr", "en"]; 
@@ -357,8 +381,105 @@ export default function App() {
   const handleContactRequest = () => { setCurrentView('contact_confirmation'); setTimeout(() => { handleCloseChat(); }, 2500); };
   const handleRfpAnalysis = () => { setCurrentView('rfp_analyzing'); setTimeout(() => { setCurrentView('rfp_summary'); }, 2500); };
   const handleScheduleSubmit = (e) => { e.preventDefault(); handleContactRequest(); };
-  const handleStartOfferChat = (offer) => { const offerName = (T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name; const welcomeMessage = { role: 'agent', text: T.ui_agent_welcome.replace('{offerName}', offerName) }; setActiveOfferForChat(offer); setOfferChatHistory([welcomeMessage]); setCurrentView('offer_chat'); };
-  const handleOfferChatSubmit = async (e) => { e.preventDefault(); const userMessageText = e.target.elements.prompt.value; if (!userMessageText.trim()) return; const newHistory = [...offerChatHistory, { role: 'user', text: userMessageText }]; setOfferChatHistory(newHistory); e.target.elements.prompt.value = ''; setIsAgentTyping(true); const offer = activeOfferForChat; const salesPersonaPrompt = `You are Alex, a world-class salesperson for Orange Business, an expert in B2B technology solutions. You are engaging, empathetic, and extremely knowledgeable. Your goal is to help the customer understand if the selected offer is the perfect fit for their needs. Context: The user is asking about the offer: - Name: "${(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}" - Description: "${(T.offers && T.offers[offer.offer_id]?.desc) || offer.description}" - Associated concepts: "${offer.associated_keywords.join(', ')}" User's question: "${userMessageText}" Your task: Answer in French. Maintain your persona as Alex. Ask clarifying questions to understand their needs. If the offer fits, guide them to the next step (add to cart or contact an expert). If not, suggest finding a better alternative.`; let chatHistory = [{ role: "user", parts: [{ text: salesPersonaPrompt }] }]; const payload = { contents: chatHistory }; const apiKey = ""; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); const result = await response.json(); const agentResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || "Je ne suis pas sûr de comprendre. Pourriez-vous reformuler ?"; setOfferChatHistory(prev => [...prev, { role: 'agent', text: agentResponse }]); } catch (error) { console.error("Error calling Gemini for offer chat:", error); setOfferChatHistory(prev => [...prev, { role: 'agent', text: "Désolé, une erreur s'est produite. Veuillez réessayer." }]); } finally { setIsAgentTyping(false); } };
+  
+  const handleStartOfferChat = async (offer) => {
+    const offerName = (T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name;
+    const welcomeMessage = { role: 'agent', text: T.ui_agent_welcome.replace('{offerName}', offerName) };
+    setActiveOfferForChat(offer);
+    setOfferChatHistory([welcomeMessage]);
+    setCurrentView('offer_chat');
+    setSuggestedQuestions([]);
+    setIsGeneratingQuestions(true);
+
+    try {
+        const prompt = `Based on the offer named "${offer.offer_name}" with the description "${offer.description}", generate three short, relevant, and distinct questions a potential B2B customer might ask. The questions should be in French. Return a JSON object with a single key "questions" which is an array of these three question strings.`;
+        let chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+        const payload = { contents: chatHistory, generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "questions": { "type": "ARRAY", "items": { "type": "STRING" } } } } } };
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const result = await response.json();
+        const textToParse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (textToParse) {
+            const parsed = JSON.parse(textToParse);
+            setSuggestedQuestions(parsed.questions || []);
+        }
+    } catch (error) {
+        console.error("Error generating suggested questions:", error);
+    } finally {
+        setIsGeneratingQuestions(false);
+    }
+  };
+
+  const handleOfferChatSubmit = async (e) => {
+    e.preventDefault();
+    const userMessageText = e.target.elements.prompt.value;
+    if (!userMessageText.trim()) return;
+
+    const newHistory = [...offerChatHistory, { role: 'user', text: userMessageText }];
+    setOfferChatHistory(newHistory);
+    e.target.elements.prompt.value = '';
+    setIsAgentTyping(true);
+    setSuggestedQuestions([]);
+    
+    const offer = activeOfferForChat;
+    const salesPersonaPrompt = `You are Alex, a world-class salesperson for Orange Business. Your task is to analyze the user's intent based on their message regarding the offer: **"${(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name}"**.
+    The user's message is: **"${userMessageText}"**.
+
+    Analyze the user's intent and respond with a JSON object containing two keys: "action" and "response".
+
+    1.  **"action"**: Determine the user's intent. It can be one of three values:
+        * \`"add_to_cart"\`: If the user expresses a clear intention to buy, purchase, or add the item to their cart (e.g., "ajoutez-le au panier", "je veux l'acheter").
+        * \`"contact_advisor"\`: If the user wants to speak to a human, an expert, or a salesperson (e.g., "parler à un conseiller", "je veux plus de détails avec un expert").
+        * \`"answer"\`: For any other question or general inquiry that doesn't fit the above categories.
+
+    2.  **"response"**: This should be your text reply to the user, written in French, as the persona Alex.
+        * If the action is \`"add_to_cart"\`, your response must be enthusiastic and confirm that you are adding the item to the cart. For example: "Excellente décision ! J'ajoute immédiatement ${(T.offers && T.offers[offer.offer_id]?.name) || offer.offer_name} à votre panier."
+        * If the action is \`"contact_advisor"\`, your response must confirm the transfer. For example: "Bien sûr. Je vous mets en relation avec un conseiller qui aura tout le contexte de notre discussion pour vous aider."
+        * If the action is \`"answer"\`, provide a helpful and professional answer to the user's question, keeping in mind the offer's details. Format your response with Markdown (using **bold** and lists with -).
+
+    **Important**: Respond only with the JSON object.`;
+
+    let chatHistory = [{ role: "user", parts: [{ text: salesPersonaPrompt }] }];
+    const payload = { contents: chatHistory, generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { action: { type: "STRING" }, response: { type: "STRING" } } } } };
+    const apiKey = "";
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    
+    try {
+        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const result = await response.json();
+        const textToParse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (textToParse) {
+            const { action, response: agentResponse } = JSON.parse(textToParse);
+            setOfferChatHistory(prev => [...prev, { role: 'agent', text: agentResponse }]);
+
+            if (action === 'add_to_cart') {
+                setTimeout(() => {
+                    const rect = chatButtonRef.current?.getBoundingClientRect();
+                    executeAddToCart(activeOfferForChat, rect);
+                }, 1000);
+            } else if (action === 'contact_advisor') {
+                setTimeout(() => {
+                    setCurrentView('contact');
+                }, 1500);
+            }
+        } else {
+             throw new Error("No response text from API");
+        }
+    } catch (error) {
+        console.error("Error in offer chat submission:", error);
+        setOfferChatHistory(prev => [...prev, { role: 'agent', text: "Désolé, une erreur technique est survenue. Veuillez réessayer." }]);
+    } finally {
+        setIsAgentTyping(false);
+    }
+  };
+  
+  const handleSuggestedQuestionClick = (question) => {
+    const fakeEvent = { preventDefault: () => {}, target: { elements: { prompt: { value: question } } } };
+    handleOfferChatSubmit(fakeEvent);
+  };
+  
   const executeAddToCart = (offer, sourceRect) => { if (sourceRect && cartRef.current) { const cartIconRect = cartRef.current.getBoundingClientRect(); setFlyingOffer({ ...offer, id: new Date().getTime() + Math.random(), source: { x: sourceRect.left, y: sourceRect.top, width: sourceRect.width, height: sourceRect.height }, target: { x: cartIconRect.left + cartIconRect.width / 2, y: cartIconRect.top + cartIconRect.height / 2 }, }); } setCart(prevCart => { if (prevCart.find(item => item.offer_id === offer.offer_id)) return prevCart; return [...prevCart, offer]; }); };
   const addToCart = (offer, e) => { const rect = e.currentTarget.closest('.offer-card').getBoundingClientRect(); if (offer.offer_id === 'O001') { setProServicesPromptOffer({ offer: offer, rect: rect }); } else { executeAddToCart(offer, rect); } };
   const handleConfirmProServices = () => { if (!proServicesPromptOffer) return; executeAddToCart(proServicesPromptOffer.offer, proServicesPromptOffer.rect); executeAddToCart(proServicesProduct, proServicesPromptOffer.rect); setProServicesPromptOffer(null); };
@@ -395,7 +516,7 @@ export default function App() {
 
       <AnimatePresence>{isCartVisible && (<motion.div initial={{ opacity: 0, y: -10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10, scale: 0.95 }} className="absolute top-24 right-8 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-40 text-gray-900"><div className="p-4 border-b flex justify-between items-center"><h3 className="font-bold text-lg">{T.ui_cart_title}</h3><button onClick={() => setIsCartVisible(false)} className="text-gray-500 hover:text-red-600"><X size={20}/></button></div><div className="p-4 max-h-96 overflow-y-auto">{cart.length === 0 ? <p className="text-gray-500 text-center py-4">{T.ui_cart_empty}</p> : (<div className="space-y-3">{cart.map(item => (<div key={item.offer_id} className="flex items-center justify-between text-sm"><span className="flex-1 pr-2">{(T.offers && T.offers[item.offer_id]?.name) || item.offer_name}</span><button onClick={() => removeFromCart(item.offer_id)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50" aria-label="Supprimer l'article"><Trash2 size={16}/></button></div>))}</div>)}</div>{cart.length > 0 && <div className="p-4 border-t bg-gray-50 rounded-b-xl"><button className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors">{T.ui_cart_checkout}</button></div>}</motion.div>)}</AnimatePresence>
       <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
-        <div className="relative flex items-center justify-center w-20 h-20">{!chatOpen && <div className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-40 animate-ping [animation-duration:2.7s]"></div>}<AnimatePresence>{hasProactiveMessage && !chatOpen && <motion.div initial={{scale:0}} animate={{scale:1}} exit={{scale:0}} className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping"></motion.div>}</AnimatePresence><button onClick={chatOpen ? handleCloseChat : () => handleOpenChat()} className="relative z-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl transition-all duration-200 ease-in-out transform hover:scale-110" aria-label="Toggle GenAI Agent">{hasProactiveMessage && !chatOpen && <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500" />}{chatOpen ? <X className="w-7 h-7" /> : <Sparkles className="w-7 h-7" />}</button></div>
+        <div ref={chatButtonRef} className="relative flex items-center justify-center w-20 h-20">{!chatOpen && <div className="absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-40 animate-ping [animation-duration:2.7s]"></div>}<AnimatePresence>{hasProactiveMessage && !chatOpen && <motion.div initial={{scale:0}} animate={{scale:1}} exit={{scale:0}} className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping"></motion.div>}</AnimatePresence><button onClick={chatOpen ? handleCloseChat : () => handleOpenChat()} className="relative z-10 bg-orange-500 hover:bg-orange-600 text-white rounded-full w-16 h-16 flex items-center justify-center shadow-xl transition-all duration-200 ease-in-out transform hover:scale-110" aria-label="Toggle GenAI Agent">{hasProactiveMessage && !chatOpen && <span className="absolute top-0 right-0 block h-4 w-4 rounded-full ring-2 ring-white bg-red-500" />}{chatOpen ? <X className="w-7 h-7" /> : <Sparkles className="w-7 h-7" />}</button></div>
         <AnimatePresence>
         {chatOpen && (
           <motion.div layout initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.95 }} transition={{ ease: "circOut", duration: 0.4 }} className={`absolute bottom-24 right-0 max-h-[80vh] bg-white text-gray-900 rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden`}>
@@ -403,8 +524,8 @@ export default function App() {
                 {isVoiceSearchActive && <VoiceSearchSimulation T={T} active={isVoiceSearchActive} onComplete={handleVoiceSearchComplete} />}
             </AnimatePresence>
            <LayoutGroup> 
-            <motion.div layout className={`flex flex-1 min-h-0 transition-all duration-500 ease-in-out ${showResultsPanel && currentView !== 'offer_chat' ? 'w-[48rem]' : 'w-[36rem]'}`}>
-              <motion.div layout="position" className="flex-1 flex flex-col min-w-[24rem] max-w-lg">
+            <motion.div layout className={`flex flex-1 min-h-0 transition-all duration-500 ease-in-out ${ (showResultsPanel || currentView === 'offer_chat') ? 'w-[48rem]' : 'w-[36rem]'}`}>
+              <motion.div layout="position" className={`flex-1 flex flex-col min-w-[24rem] ${currentView === 'offer_chat' ? '' : 'max-w-lg'}`}>
                 <div className="flex justify-between items-center flex-shrink-0 p-4 border-b border-gray-200"><div className="flex gap-2">{allLanguages.map((lang) => (<button key={lang} onClick={() => setLanguage(lang)} className={`transition-transform duration-200 ${language === lang ? 'scale-125' : 'opacity-50 hover:opacity-100 hover:scale-110'}`} title={lang}><LanguageFlag lang={lang} /></button>))}</div><div className="flex items-center gap-4"><button onClick={handleReset} className="text-gray-500 hover:text-orange-600 transition-colors" aria-label="Réinitialiser"><RotateCcw className="w-5 h-5" /></button><button onClick={handleCloseChat} className="text-gray-500 hover:text-red-600 transition-colors" aria-label="Fermer"><X className="w-5 h-5" /></button></div></div>
                 <div className="overflow-y-auto flex-grow">
                   <AnimatePresence mode="wait">
@@ -412,7 +533,7 @@ export default function App() {
                         switch(currentView) {
                              case 'initial': return (<motion.div key="initial" className="p-6"><div className="flex flex-wrap justify-center gap-2">{initialKeywords.map(({keyword, persona}, index) => (<motion.button key={keyword} layoutId={`kw-${keyword}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 + 0.1 } }} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => handleSelectKeyword(keyword, persona)} className={`text-sm px-3 py-1.5 rounded-full border-2 font-medium ${personas[persona].color.bg} ${personas[persona].color.text} ${personas[persona].color.border} ${personas[persona].color.hoverBorder} flex items-center gap-2 shadow-sm hover:shadow-md`}>{T[keyword] || keyword}</motion.button>))}</div><div className="mt-4 pt-4 border-t"><button onClick={() => setCurrentView('faq')} className="w-full flex items-center justify-center gap-3 p-3 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"><LifeBuoy className="text-orange-500"/>{T.ui_faq_title}</button></div></motion.div>);
                              case 'refinement': return (<motion.div key="refinement"><motion.div layout className="flex flex-wrap gap-2 p-4 border-b min-h-[44px]"><AnimatePresence>{sortedSelected.map(word => (<motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleDeselectKeyword(word)} className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full text-white ${personas[activePersonaKey]?.color.selectedBg || 'bg-gray-500'} hover:bg-red-500 shadow-md`}>{T[word] || word} <X className="w-3 h-3" /></motion.button>))}</AnimatePresence></motion.div><div className="p-4">{ (availableKeywords.length > 0) && <h3 className="font-semibold text-sm mb-3 text-gray-600">{T.ui_refine_search}</h3> }<div className="flex flex-wrap gap-2">{availableKeywords.map((word) => (<motion.button layoutId={`kw-${word}`} key={word} onClick={() => handleSelectKeyword(word)} className={`text-sm px-3 py-1 rounded-full border ${personas[activePersonaKey]?.color.bg} ${personas[activePersonaKey]?.color.text} ${personas[activePersonaKey]?.color.border} ${personas[activePersonaKey]?.color.hoverBg}`}>{T[word] || word}</motion.button>))}</div></div></motion.div>);
-                             case 'offer_chat': return (<motion.div key="offer_chat" className="flex flex-col h-full"><div className="p-4 border-b"><button onClick={() => setCurrentView('refinement')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-2"><ArrowLeft size={16}/> {T.ui_back_to_offers}</button><h3 className="font-bold text-lg text-center text-orange-600">{(T.offers && T.offers[activeOfferForChat.offer_id]?.name) || activeOfferForChat.offer_name}</h3></div><div className="flex-grow p-4 space-y-4 overflow-y-auto">{offerChatHistory.map((msg, index) => (<div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>{msg.role === 'agent' && <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center shrink-0"><Sparkles size={18}/></div>}<div className={`max-w-xs md:max-w-md p-3 rounded-2xl ${msg.role === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 rounded-bl-none'}`}><p className="text-sm">{msg.text}</p></div></div>))}{isAgentTyping && (<div className="flex items-end gap-2"><div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center shrink-0"><Sparkles size={18}/></div><div className="p-3 rounded-2xl bg-gray-200 rounded-bl-none"><div className="flex items-center gap-1.5"><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity}} className="w-2 h-2 bg-gray-500 rounded-full"/><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.2}} className="w-2 h-2 bg-gray-500 rounded-full"/><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.4}} className="w-2 h-2 bg-gray-500 rounded-full"/></div></div></div>)}</div><div className="p-3 mt-auto border-t"><form onSubmit={handleOfferChatSubmit} className="relative flex items-center"><input type="text" name="prompt" disabled={isAgentTyping} placeholder={T.ui_chat_prompt_placeholder} className="w-full pl-4 pr-12 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:bg-gray-100 text-sm"/><button type="submit" disabled={isAgentTyping} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400"><Send className="w-5 h-5"/></button></form></div></motion.div>);
+                             case 'offer_chat': return (<motion.div key="offer_chat" className="flex flex-col h-full"><div className="p-4 border-b"><button onClick={() => setCurrentView('refinement')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-2"><ArrowLeft size={16}/> {T.ui_back_to_offers}</button><h3 className="font-bold text-lg text-center text-orange-600">{(T.offers && T.offers[activeOfferForChat.offer_id]?.name) || activeOfferForChat.offer_name}</h3></div><div className="flex-grow p-4 space-y-4 overflow-y-auto">{offerChatHistory.map((msg, index) => { if(msg.role === 'agent' && index === 0) { return (<div key={index} className="flex items-start gap-3"><div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center shrink-0"><Sparkles size={18}/></div><div className="flex items-start gap-4"><div className="max-w-xs p-3 rounded-2xl bg-gray-200 rounded-bl-none"><MarkdownRenderer text={msg.text} /></div><div className="flex flex-col items-start gap-2 pt-1">{isGeneratingQuestions && (<div className="p-3 rounded-2xl self-start"><div className="flex items-center gap-1.5"><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity}} className="w-2 h-2 bg-gray-400 rounded-full"/><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.2}} className="w-2 h-2 bg-gray-400 rounded-full"/><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.4}} className="w-2 h-2 bg-gray-400 rounded-full"/></div></div>)}{!isGeneratingQuestions && suggestedQuestions.length > 0 && (suggestedQuestions.map((q, i) => (<motion.button key={i} onClick={() => handleSuggestedQuestionClick(q)} className="text-sm text-left text-orange-600 bg-orange-50 hover:bg-orange-100 rounded-lg px-3 py-1.5 transition-colors whitespace-nowrap" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0, transition: { delay: i * 0.1 } }}>{q}</motion.button>)))}</div></div></div>); } return (<div key={index} className={`flex items-start gap-2 ${msg.role === 'user' ? 'justify-end' : ''}`}>{msg.role === 'agent' && <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center shrink-0"><Sparkles size={18}/></div>}<div className={`max-w-md p-3 rounded-2xl ${msg.role === 'user' ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 rounded-bl-none'}`}><MarkdownRenderer text={msg.text} /></div>{msg.role === 'user' && <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0">U</div>}</div>);})}{isAgentTyping && (<div className="flex items-start gap-2"><div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center shrink-0"><Sparkles size={18}/></div><div className="p-3 rounded-2xl bg-gray-200 rounded-bl-none"><div className="flex items-center gap-1.5"><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity}} className="w-2 h-2 bg-gray-500 rounded-full"/><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.2}} className="w-2 h-2 bg-gray-500 rounded-full"/><motion.div animate={{scale:[1,1.2,1], opacity:[0.5,1,0.5]}} transition={{duration:1, repeat:Infinity, delay:0.4}} className="w-2 h-2 bg-gray-500 rounded-full"/></div></div></div>)}</div><div className="p-3 mt-auto border-t"><form onSubmit={handleOfferChatSubmit} className="relative flex items-center"><input type="text" name="prompt" disabled={isAgentTyping} placeholder={T.ui_chat_prompt_placeholder} className="w-full pl-4 pr-12 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:bg-gray-100 text-sm"/><button type="submit" disabled={isAgentTyping} className="absolute right-1 top-1/2 -translate-y-1/2 p-2 rounded-full text-white bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400"><Send className="w-5 h-5"/></button></form></div></motion.div>);
                              case 'faq': return (<motion.div key="faq" className="p-5 text-center"><button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button><h2 className="text-lg font-bold">{T.ui_faq_title}</h2><p className="text-sm text-gray-500 mt-1 mb-4">{T.ui_faq_subtitle}</p><div className="space-y-2 text-left"><button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">{T.ui_faq_prompt_1}</button><button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">{T.ui_faq_prompt_2}</button><button className="w-full p-2 text-sm text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">{T.ui_faq_prompt_3}</button></div></motion.div>);
                              case 'rfp': return (<motion.div key="rfp" className="p-5 text-center"><button onClick={() => setCurrentView('initial')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 mb-4"><ArrowLeft size={16}/> Retour</button><h2 className="text-lg font-bold">{T.ui_upload_title}</h2><p className="text-sm text-gray-500 mt-1 mb-6">{T.ui_upload_subtitle}</p><motion.button onClick={handleRfpAnalysis} whileHover={{scale: 1.05}} whileTap={{scale: 0.95}} className="w-full bg-orange-500 text-white font-bold py-2 px-4 rounded-lg shadow-lg hover:bg-orange-600">{T.ui_upload_cta}</motion.button></motion.div>);
                              case 'rfp_analyzing': return (<motion.div key="rfp_analyzing" className="p-8 flex flex-col items-center justify-center h-full text-center"><motion.div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" /><p className="mt-4 font-semibold">{T.ui_upload_analyzing}</p></motion.div>);
